@@ -4,3 +4,7 @@
 *.root
 .venv/
 .vscode/
+sou*~
+G4History.macro
+tmp/
+bin/
