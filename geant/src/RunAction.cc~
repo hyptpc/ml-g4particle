@@ -1,0 +1,84 @@
+// ====================================================================
+//   RunAction.cc
+//
+// ====================================================================
+#include "G4Run.hh"
+#include "RunAction.hh"
+
+#include "globals.hh"
+#include "TROOT.h"
+#include "TRint.h"
+#include "TH1.h"
+#include "TFile.h"
+#include "TTree.h"
+
+//////////////////////
+RunAction::RunAction()
+//////////////////////
+{
+  // initialize root
+
+  std::cout<<"hoge1"<<std::endl;
+  //gROOT->Reset();
+  std::cout<<"hoge2"<<std::endl;
+  
+  // define histograms
+  // hist_shower = new TH1D("shower", "Shower Development", 50, 0., 50.);
+  // hist_shower-> GetXaxis()-> SetTitle("Depth");
+  // hist_shower-> GetYaxis()-> SetTitle("Deposit Energy (MeV)");
+  
+  // h2_layer_beta = new TH2D("h2_layer_beta","layer vs beta",100,0.,1.,8,0.,8.);
+  // h2_layer_beta_nohad = new TH2D("h2_layer_beta_nohad","layer vs beta",100,0.,1.,8,0.,8);
+  // h2_layer_beta_had = new TH2D("h2_layer_beta_had","layer vs beta",100,0.,1.,8,0.,8);
+  
+  
+  
+  
+  
+  tree = new TTree("tree","tree");
+  //  tree->Branch("beta1",&beta1,"beta1/S");
+}
+
+///////////////////////
+RunAction::~RunAction()
+///////////////////////
+{
+  //  delete hist_shower;
+}
+
+///////////////////////////////////////////////////
+void RunAction::BeginOfRunAction(const G4Run* aRun)
+///////////////////////////////////////////////////
+{
+  //  hist_shower-> Reset();
+  // h2_layer_beta->Reset();
+}
+
+/////////////////////////////////////////////////
+void RunAction::EndOfRunAction(const G4Run* aRun)
+/////////////////////////////////////////////////
+{
+  //  TFile* file = new TFile("rootfiles/E90_Kbeam.root",
+  // TFile* file = new TFile("rootfiles/out.root",
+  //  			  "RECREATE", "Geant4 ROOT analysis");
+  // TFile* file = new TFile("rootfiles/E05_scatK_beamthrough_E90simulator.root",
+  //   			  "RECREATE", "Geant4 ROOT analysis");
+  TFile* file = new TFile("rootfiles/E05_beamK_beamthrough_E90simulator.root",
+     			  "RECREATE", "Geant4 ROOT analysis");
+  // TFile* file = new TFile("rootfiles/kaon_CH2.root",
+  // 			  "RECREATE", "Geant4 ROOT analysis");
+
+  // hist_shower-> Write();
+  // h2_layer_beta->Write();
+  // h2_layer_beta_had->Write();
+  // h2_layer_beta_nohad->Write();
+
+ 
+  tree->Write();
+
+  
+ 
+  file-> Close();
+  delete file;
+}
+
