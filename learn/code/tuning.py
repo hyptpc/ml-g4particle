@@ -1,24 +1,24 @@
+# ***************************************
+#
+# Hyperparameter optimization with Optuna
+#
+# 2024/08/14 K.Amemiya
+# ***************************************
+
 import torch.multiprocessing
-torch.multiprocessing.set_sharing_strategy('file_system')
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 import uproot3
-import numpy as np
 import matplotlib.pyplot as plt
-import os
-import sys
-import time
 import optuna
-
-n_epoch = 50
-num_workers = 8
-input_size = 3
-output_size = 3
+import optuna.visualization as vis
+import os
 
 """データセットの定義"""
+
 
 class CustomRootDataset(Dataset):
     def __init__(self, root_file_path, tree_name, sample_fraction):
@@ -60,14 +60,15 @@ class CustomRootDataset(Dataset):
 
 """ モデルの定義 """
 
-class ExampleNN(nn.Module):
-    def __init__(self, input_size, hidden_layers, hidden_size, output_size):
+
+class MLP_NN(nn.Module):
+    def __init__(self, input_size, hidden_sizes, output_size):
         super().__init__()
         self.hidden_layers = nn.ModuleList()
-        self.hidden_layers.append(nn.Linear(input_size, hidden_size))
-        for _ in range(hidden_layers - 1):
-            self.hidden_layers.append(nn.Linear(hidden_size, hidden_size))
-        self.output_layer = nn.Linear(hidden_size, output_size)
+        self.hidden_layers.append(nn.Linear(input_size, hidden_sizes[0]))
+        for i in range(1, len(hidden_sizes)):
+            self.hidden_layers.append(nn.Linear(hidden_sizes[i - 1], hidden_sizes[i]))
+        self.output_layer = nn.Linear(hidden_sizes[-1], output_size)
 
     def forward(self, x):
         for layer in self.hidden_layers:
@@ -75,7 +76,9 @@ class ExampleNN(nn.Module):
         x = self.output_layer(x)
         return x
 
+
 """ training function """
+
 
 def train_model(model, train_loader, loss_function, optimizer, device="cpu"):
     train_loss = 0.0
@@ -97,7 +100,9 @@ def train_model(model, train_loader, loss_function, optimizer, device="cpu"):
     train_accuracy /= num_train
     return train_loss, train_accuracy
 
+
 """ val function """
+
 
 def val_model(model, val_loader, loss_function, device="cpu"):
     val_loss = 0.0
@@ -117,32 +122,46 @@ def val_model(model, val_loader, loss_function, device="cpu"):
     val_accuracy /= num_val
     return val_loss, val_accuracy
 
+
 """ Optuna objective function """
 
+
 def objective(trial):
-    hidden_layers = trial.suggest_int("hidden_layers", 2, 8)
-    hidden_size = trial.suggest_int("hidden_size", 128, 1024, log=True)
-    lr = trial.suggest_float("lr", 1e-5, 1e-1, log=True)
-    
-    sample_fraction = 0.1  # データのサンプリング割合
-    full_dataset = CustomRootDataset(input_root_path, tree_name, sample_fraction)
+    hidden_layers = trial.suggest_int("hidden_layers", 2, 6)
+    # 各hidden_layerごとに異なるhidden_sizeを探索
+    hidden_sizes = [
+    trial.suggest_categorical(f"hidden_size_{i}", [128, 256, 512, 1024])
+    for i in range(hidden_layers)
+]
+
+    full_dataset = CustomRootDataset(
+        input_root_path, tree_name, sample_fraction=0.1
+    )  # 50,000 samples
     dataset_size = len(full_dataset)
     train_size = int(0.8 * dataset_size)
     val_size = dataset_size - train_size
-    train_dataset, val_dataset = torch.utils.data.random_split(full_dataset, [train_size, val_size])
-    train_loader = DataLoader(train_dataset, batch_size=256, shuffle=True, num_workers=num_workers)
-    val_loader = DataLoader(val_dataset, batch_size=256, shuffle=True, num_workers=num_workers)
+    train_dataset, val_dataset = torch.utils.data.random_split(
+        full_dataset, [train_size, val_size]
+    )
+    train_loader = DataLoader(
+        train_dataset, batch_size=256, shuffle=True, num_workers=8
+    )
+    val_loader = DataLoader(val_dataset, batch_size=256, shuffle=True, num_workers=8)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = ExampleNN(input_size, hidden_layers, hidden_size, output_size).to(device)
+    model = MLP_NN(input_size=3, hidden_sizes=hidden_sizes, output_size=3).to(device)
 
     loss_function = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=lr)
+    optimizer = optim.SGD(model.parameters(), lr=0.01)
 
     min_val_loss = float("inf")
     for epoch in range(1, n_epoch + 1):
-        train_loss, train_accuracy = train_model(model, train_loader, loss_function, optimizer, device=device)
-        val_loss, val_accuracy = val_model(model, val_loader, loss_function, device=device)
+        train_loss, train_accuracy = train_model(
+            model, train_loader, loss_function, optimizer, device=device
+        )
+        val_loss, val_accuracy = val_model(
+            model, val_loader, loss_function, device=device
+        )
 
         trial.report(val_loss, epoch)
         if trial.should_prune():
@@ -150,33 +169,37 @@ def objective(trial):
 
     return val_loss
 
+
+""" Studyの履歴を保存して再開できるようにする """
+
+
 def save_trial_history(study, output_path):
     trials = study.trials
-    history = {
-        "trial": [],
-        "hidden_layers": [],
-        "hidden_size": [],
-        "lr": [],
-        "val_loss": []
-    }
+    history = {"trial": [], "hidden_layers": [], "hidden_sizes": [], "val_loss": []}
     for trial in trials:
         history["trial"].append(trial.number)
         history["hidden_layers"].append(trial.params["hidden_layers"])
-        history["hidden_size"].append(trial.params["hidden_size"])
-        history["lr"].append(trial.params["lr"])
+        hidden_sizes = [
+            trial.params.get(f"hidden_size_{i}", None)
+            for i in range(trial.params["hidden_layers"])
+        ]
+        history["hidden_sizes"].append(hidden_sizes)
         history["val_loss"].append(trial.value)
-    
+
     with open(output_path, "w") as f:
         for key in history:
             f.write(f"{key}," + ",".join(map(str, history[key])) + "\n")
+
+
+""" 再開用の機能を持った履歴の読み込み """
+
 
 def load_trial_history(input_path):
     history = {
         "trial": [],
         "hidden_layers": [],
-        "hidden_size": [],
-        "lr": [],
-        "val_loss": []
+        "hidden_sizes": [],
+        "val_loss": [],
     }
     with open(input_path, "r") as f:
         lines = f.readlines()
@@ -188,56 +211,54 @@ def load_trial_history(input_path):
         for line in lines[1:]:
             values = line.strip().split(",")
             for i, key in enumerate(keys):
-                try:
-                    if key != "trial":
-                        history[key].append(float(values[i]))
-                    else:
-                        history[key].append(int(values[i]))
-                except ValueError:
-                    # Handle any conversion errors here (e.g., missing data)
-                    print(f"Error converting value {values[i]} for key {key}")
+                if key == "hidden_sizes":
+                    history[key].append([int(v) for v in values[i].strip("[]").split()])
+                elif key == "trial":
+                    history[key].append(int(values[i]))
+                else:
+                    history[key].append(float(values[i]))
     return history
 
-def plot_trial_history(history):
-    plt.figure(figsize=(12, 8))
-    
-    plt.subplot(2, 1, 1)
-    plt.plot(history["trial"], history["val_loss"], "bo-", label="Validation Loss")
-    plt.xlabel("Trial")
-    plt.ylabel("Validation Loss")
-    plt.title("Validation Loss Across Trials")
-    plt.legend()
-    
-    plt.subplot(2, 2, 3)
-    plt.plot(history["trial"], history["hidden_layers"], "ro-", label="Hidden Layers")
-    plt.xlabel("Trial")
-    plt.ylabel("Hidden Layers")
-    plt.legend()
-    
-    plt.subplot(2, 2, 4)
-    plt.plot(history["trial"], history["hidden_size"], "go-", label="Hidden Size")
-    plt.xlabel("Trial")
-    plt.ylabel("Hidden Size")
-    plt.legend()
-    
-    plt.tight_layout()
-    plt.savefig(f"/home/had/kohki/work/ML/2024/learn/figures/optuna.png")
+
+""" Contour PlotとHyperparameter Importancesの保存 """
+
+
+def plot_hyperparameter_importances(study):
+    fig = vis.plot_param_importances(study)
+    fig.write_image(
+        "/home/had/kohki/work/ML/2024/learn/figures/hyperparameter_importances.png"
+    )
+
+
+def plot_contour(study):
+    fig = vis.plot_contour(study)
+    fig.write_image("/home/had/kohki/work/ML/2024/learn/figures/contour_plot.png")
+
 
 if __name__ == "__main__":
+    n_epoch = 50
     input_root_path = "/home/had/kohki/work/ML/2024/geant/rootfiles/input_test.root"
-    tree_name = "tree_10layer"
-    study = optuna.create_study(direction="minimize")
-    study.optimize(objective, n_trials=100, timeout=3600)
+    tree_name = "tree_32layer"
 
-    trial_history_path = "optuna_trial_history.csv"
-    save_trial_history(study, trial_history_path)
-    
-    history = load_trial_history(trial_history_path)
-    plot_trial_history(history)
+    # Check if a previous study exists
+    study_name = "hidden_study"
+    storage_name = "sqlite:///optuna.db"
+    if os.path.exists("optuna.db"):
+        study = optuna.load_study(study_name=study_name, storage=storage_name)
+    else:
+        study = optuna.create_study(
+            study_name=study_name, storage=storage_name, direction="minimize"
+        )
 
-    print("Best trial:")
-    trial = study.best_trial
-    print(f"  Value: {trial.value}")
-    print("  Params: ")
-    for key, value in trial.params.items():
-        print(f"    {key}: {value}")
+    study.optimize(objective, n_trials=100)
+
+    # トライアル履歴を保存
+    save_trial_history(
+        study, "/home/had/kohki/work/ML/2024/learn/csv/trial_history.csv"
+    )
+
+    # ハイパーパラメータの重要性をプロットして保存
+    plot_hyperparameter_importances(study)
+
+    # Contour Plotをプロットして保存
+    plot_contour(study)
