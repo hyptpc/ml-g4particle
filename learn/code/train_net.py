@@ -22,7 +22,8 @@ n_epoch = 50
 num_workers = 8
 input_size = 3
 hidden1_size = 1024
-hidden2_size = 512
+hidden2_size = 1024
+hidden3_size=256
 output_size = 3
 
 
@@ -71,17 +72,19 @@ class CustomRootDataset(Dataset):
 
 """ モデルの定義 """
 
-class ExampleNN(nn.Module):
-    def __init__(self, input_size, hidden1_size, hidden2_size, output_size):
+class mlpNN(nn.Module):
+    def __init__(self, input_size, hidden1_size, hidden2_size, hidden3_size, output_size):
         super().__init__()
         self.fc1 = nn.Linear(input_size, hidden1_size)
         self.fc2 = nn.Linear(hidden1_size, hidden2_size)
-        self.fc3 = nn.Linear(hidden2_size, output_size)
+        self.fc3 = nn.Linear(hidden2_size, hidden3_size)
+        self.fc4 = nn.Linear(hidden3_size, output_size)
 
     def forward(self, x):
         z1 = F.relu(self.fc1(x))
         z2 = F.relu(self.fc2(z1))
-        return self.fc3(z2)
+        z3 = F.relu(self.fc3(z2))
+        return self.fc4(z3)
 
 
 """ training function """
@@ -139,7 +142,7 @@ def plot_figures(
     plt.figure(figsize=(10, 4))
     plt.subplot(1, 2, 1)
     plt.plot(train_accuracy_list, c="blue", label="train", linestyle="--")
-    plt.plot(val_accuracy_list, c="green", label="val", linestyle="-")
+    plt.plot(val_accuracy_list, c="red", label="val", linestyle="-")
     plt.legend()
     plt.xlabel("epoch", fontsize=10)
     plt.ylabel("accuracy", fontsize=10)
@@ -149,7 +152,7 @@ def plot_figures(
     
     plt.subplot(1, 2, 2)
     plt.plot(train_loss_list, c="blue", label="train", linestyle="--")
-    plt.plot(val_loss_list, c="green", label="val", linestyle="-")
+    plt.plot(val_loss_list, c="red", label="val", linestyle="-")
     plt.legend()
     plt.xlabel("epoch", fontsize=10)
     plt.ylabel("loss", fontsize=10)
@@ -279,7 +282,7 @@ def main():
 
     # モデルの再定義と初期化
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = ExampleNN(input_size, hidden1_size, hidden2_size, output_size).to(device)
+    model = mlpNN(input_size, hidden1_size, hidden2_size, hidden3_size, output_size).to(device)
 
     print("*********************************")
     print("number of CPU core: ", os.cpu_count())

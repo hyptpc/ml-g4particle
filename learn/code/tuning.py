@@ -222,19 +222,6 @@ def load_trial_history(input_path):
 
 """ Contour PlotとHyperparameter Importancesの保存 """
 
-
-def plot_hyperparameter_importances(study):
-    fig = vis.plot_param_importances(study)
-    fig.write_image(
-        "/home/had/kohki/work/ML/2024/learn/figures/hyperparameter_importances.png"
-    )
-
-
-def plot_contour(study):
-    fig = vis.plot_contour(study)
-    fig.write_image("/home/had/kohki/work/ML/2024/learn/figures/contour_plot.png")
-
-
 if __name__ == "__main__":
     n_epoch = 50
     input_root_path = "/home/had/kohki/work/ML/2024/geant/rootfiles/input_test.root"
@@ -256,9 +243,11 @@ if __name__ == "__main__":
     save_trial_history(
         study, "/home/had/kohki/work/ML/2024/learn/csv/trial_history.csv"
     )
-
-    # ハイパーパラメータの重要性をプロットして保存
-    plot_hyperparameter_importances(study)
-
-    # Contour Plotをプロットして保存
-    plot_contour(study)
+    
+    # 最良の結果を表示
+    best_trial = study.best_trial
+    print(f"Best trial number: {best_trial.number}")
+    print(f"Best trial value (validation loss): {best_trial.value}")
+    print("Best hyperparameters:")
+    for key, value in best_trial.params.items():
+        print(f"  {key}: {value}")

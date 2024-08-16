@@ -7,11 +7,12 @@ import uproot3
 import numpy as np
 from torch.utils.data import DataLoader
 from train_net import (
-    ExampleNN,
+    mlpNN,
     CustomRootDataset,
     input_size,
     hidden1_size,
     hidden2_size,
+    hidden3_size,
     output_size,
     num_workers,
 )
@@ -74,7 +75,7 @@ def fill_rootfile(model, test_loader, checkpoint_path, output_root_path, tree_na
 # Main function
 def main():
     if len(sys.argv) < 2:
-        print("Please provide the layer number as an argument (e.g., 'python3 evaluate_net.py 10').")
+        print("Please provide the layer number as an argument (e.g., 'python3 test_net.py 10').")
         sys.exit(1)
     layer_num = int(sys.argv[1])
     tree_name = f"tree_{layer_num}layer"
@@ -91,7 +92,7 @@ def main():
 
     # Initialize the model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = ExampleNN(input_size, hidden1_size, hidden2_size, output_size).to(device)
+    model = mlpNN(input_size, hidden1_size, hidden2_size, hidden3_size, output_size).to(device)
     if torch.cuda.is_available() and torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
 

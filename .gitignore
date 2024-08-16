@@ -2,6 +2,7 @@
 *.png
 *.csv
 *.root
+*.db
 .venv/
 .vscode/
 sou*~
