@@ -8,21 +8,27 @@
 
 #!/bin/bash
 
-# # Compare Eff vs FoM for Likelihood and ML at each number of layers
-# for layer in {10..32}; do
-#     bsub -q sx root -q -b "compare_likelihood.cc($layer)"
-# done
+# Submit jobs to compare Eff vs FoM for Likelihood and ML at each number of layers
+for layer in {10..32}; do
+    bsub -q sx root -q -b "compare_likelihood.cc($layer)"
+done
 
-# # wait until all jobs are finished
-#     bjobs -w | grep -q "PEND\|RUN"
-#     while [ $? -eq 0 ]
-#     do
-#         echo "Waiting for all jobs to finish..."
-#         sleep 30
-#         bjobs -w | grep -q "PEND\|RUN"
-#     done
+# Wait for all the jobs to finish
+while true; do
+    # Check if there are any running or pending jobs submitted by this user
+    running_jobs=$(bjobs | grep -c "PEND\|RUN")
+    
+    if [ "$running_jobs" -eq 0 ]; then
+        break
+    else
+        echo "Waiting for jobs to finish..."
+        sleep 60  # Check every 60 seconds
+    fi
+done
 
-# calculate Likelihood accuracy for each layer
+# After all jobs are finished, submit the next set of jobs to calculate Likelihood accuracy
 for layer in {10..32}; do
     bsub -q sx root -q -b "cal_acc.cc($layer)"
 done
+
+echo "All jobs submitted."

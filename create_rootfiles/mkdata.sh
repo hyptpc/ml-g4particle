@@ -21,10 +21,10 @@
 #     bjobs -w | grep -q "PEND\|RUN"
 # done
 
-# integrate all output rootfiles
-cd /home/had/kohki/work/ML/2024/geant/rootfiles
-rm -rf input.root
-hadd input.root input*layer.root
+# # integrate all output rootfiles
+# cd /home/had/kohki/work/ML/2024/geant/rootfiles
+# rm -rf input.root
+# hadd input.root input*layer.root
 
 # # wait until merging is finished, and delete tmp rootfiles
 # if [ $? -eq 0 ]; then
@@ -35,7 +35,7 @@ hadd input.root input*layer.root
 #     exit 1
 # fi
 
-# # create pdf data for each layer
-# for layer in {10..32}; do
-#     bsub -q hx root -q -b "mkpdf.cc($layer)"
-# done
+# create pdf data for each layer
+for layer in {10..32}; do
+    bsub -q sx root -q -b "mkpdf.cc($layer)"
+done

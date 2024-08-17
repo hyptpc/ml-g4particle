@@ -14,41 +14,42 @@
 
 double fit_mom = 0.310;
 
-std::pair<double, double> fit_gaussian(int id, TH1D *h, TF1 *f, const std::vector<double> &data, TCanvas *c, TLegend *legend, int pid, double sigma_max)
+std::pair<double, double> fit_gaussian(int id, TH1D *h, TF1 *f, const std::vector<double> &data, TCanvas *c, TLegend *legend, int pid)
 {
     // Fill histogram with data
     for (auto val : data)
         h->Fill(val);
 
+    double hist_std_dev = h->GetStdDev();
+
     // Set histogram and fit function colors based on particle_id
-    int hist_colors[] = {1, 1, 1};
     int fit_colors[] = {46, 9, 8};
     // Set limits for mean
-    double mean_min = h->GetMean() - sigma_max;
-    double mean_max = h->GetMean() + sigma_max;
+    double mean_min = h->GetMean() - hist_std_dev;
+    double mean_max = h->GetMean() + hist_std_dev;
     f->SetParLimits(1, mean_min, mean_max);
-    f->SetParLimits(2, 0, sigma_max);
+    f->SetParLimits(2, 0, hist_std_dev + 0.5);
     f->SetLineColor(fit_colors[pid]);
-    h->SetLineColor(hist_colors[pid]);
+    h->SetLineColor(1);
     h->Fit(f);
 
     double mean = f->GetParameter(1);
     double sigma = f->GetParameter(2);
 
     // Ensure mean and sigma are within specified ranges
-    if (mean < mean_min || mean > mean_max)
-    {
-        mean = h->GetMean();
-        std::cout << "Mean out of range " << std::endl;
-    }
-    if (sigma > sigma_max)
-    {
-        sigma = sigma_max;
-        std::cout << "Sigma out of range " << std::endl;
-    }
-    // Update the fit function with the corrected parameters
-    f->SetParameter(1, mean);
-    f->SetParameter(2, sigma);
+    // if (mean < mean_min || mean > mean_max)
+    // {
+    //     mean = h->GetMean();
+    //     std::cout << "Mean out of range " << std::endl;
+    // }
+    // if (sigma > hist_std_dev + 0.5)
+    // {
+    //     sigma = hist_std_dev;
+    //     std::cout << "Sigma out of range " << std::endl;
+    // }
+    // // Update the fit function with the corrected parameters
+    // f->SetParameter(1, mean);
+    // f->SetParameter(2, sigma);
 
     if (id == 0)
         h->GetXaxis()->SetTitle("Energy [MeV]");
@@ -127,9 +128,9 @@ void checkfit()
                 c1->cd(pid + 1);
                 gPad->SetLogy(0); // Ensure not in log scale
                 hene[pid] = new TH1D(hist_name, "", 100, 0, 18);
-                fene[pid] = new TF1(func_name, "gaus");
+                fene[pid] = new TF1(func_name, "gaus", 0, 18);
 
-                fit_gaussian(0, hene[pid], fene[pid], ene_dist, c1, legends1[pid], pid, 0.3);
+                fit_gaussian(0, hene[pid], fene[pid], ene_dist, c1, legends1[pid], pid);
                 legends1[pid]->Draw();
             }
         }
@@ -156,9 +157,9 @@ void checkfit()
                 c2->cd(pid + 1);
                 gPad->SetLogy(0); // Ensure not in log scale
                 htof[pid] = new TH1D(hist_name, "", 100, 0, 6);
-                ftof[pid] = new TF1(func_name, "gaus");
+                ftof[pid] = new TF1(func_name, "gaus", 0, 6);
 
-                fit_gaussian(1, htof[pid], ftof[pid], tof_dist, c2, legends2[pid], pid, 0.15);
+                fit_gaussian(1, htof[pid], ftof[pid], tof_dist, c2, legends2[pid], pid);
                 legends2[pid]->Draw();
             }
         }
@@ -166,6 +167,6 @@ void checkfit()
 
     c2->Update();
 
-    c1->SaveAs("ene_fit.png");
-    c2->SaveAs("tof_fit.png");
+    // c1->SaveAs("ene_fit.png");
+    // c2->SaveAs("tof_fit.png");
 }

@@ -42,21 +42,21 @@ std::pair<double, double> fit_gaussian(const std::vector<double> &data, const st
 
     double hist_std_dev = h.GetStdDev(); // Get the standard deviation from the histogram
 
-    TF1 f("f", "gaus(0)", min, max);
+    TF1 f("f", "gaus", min, max);
     double mean_min = h.GetMean() - hist_std_dev;
     double mean_max = h.GetMean() + hist_std_dev;
-    f.SetParLimits(1, mean_min, mean_max); // Set limits for mean
-    f.SetParLimits(2, 0, hist_std_dev);    // Set upper limit for sigma based on the histogram's std dev
+    f.SetParLimits(1, mean_min, mean_max);    // Set limits for mean
+    f.SetParLimits(2, 0, hist_std_dev + 0.5); // Set upper limit for sigma based on the histogram's std dev
 
     h.Fit(&f, "Q");
 
     double mean = f.GetParameter(1);
     double sigma = f.GetParameter(2);
-    // Ensure mean and sigma are within specified ranges
-    if (mean < mean_min || mean > mean_max)
-        mean = h.GetMean();
-    if (sigma > hist_std_dev + 0.5)
-        sigma = hist_std_dev;
+    // // Ensure mean and sigma are within specified ranges
+    // if (mean < mean_min || mean > mean_max)
+    //     mean = h.GetMean();
+    // if (sigma > hist_std_dev + 0.5)
+    //     sigma = hist_std_dev;
 
     return std::make_pair(mean, sigma);
 }

@@ -13,7 +13,7 @@ void draw_pdf() // GeV/c
   gStyle->SetOptStat(0); // Disable statistics box
 
   int layers = 32;
-  double true_mom = 0.799;
+  double true_mom = 0.310;
   int fixed_mom = (int)((true_mom - 0.3) * 1000.);
 
   TFile *file = new TFile(Form("/home/had/kohki/work/ML/2024/geant/rootfiles/hpdf_%dlayer.root", layers));
