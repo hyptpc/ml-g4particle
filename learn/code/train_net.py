@@ -1,4 +1,4 @@
-# ============== HOW TO RUN ==================
+# ==========================================
 #   input: particle, mom, tof, ene
 #   output: particle_ML
 #
@@ -27,20 +27,13 @@ if len(sys.argv) < 2:
 
 layer_num = int(sys.argv[1])
 tree_name = f"tree_{layer_num}layer"
-checkpoint_path = f"/home/had/kohki/work/ML/test/learn/pth/train_{layer_num}layer.pth"
-fig_path = f"/home/had/kohki/work/ML/test/learn/figures/train_{layer_num}layer.png"
-input_root_path = "/home/had/kohki/work/ML/test/geant/rootfiles/input_nn.root"
+checkpoint_path = (
+    f"/home/had/kohki/work/ML/2024nov/learn/pth/train_{layer_num}layer.pth"
+)
+fig_path = f"/home/had/kohki/work/ML/2024nov/learn/figures/train_{layer_num}layer.png"
+input_root_path = "/home/had/kohki/work/ML/2024nov/geant/rootfiles/input_nn.root"
 sample_fraction = 1  # データのサンプリング割合
-
 n_epoch = 50
-num_workers = 8
-input_size = layer_num + 2
-hidden1_size = 256
-hidden2_size = 512
-hidden3_size = 128
-hidden4_size = 1024
-hidden5_size = 1024
-output_size = 3
 
 
 """データセットの定義"""
@@ -91,13 +84,11 @@ class CustomRootDataset(Dataset):
         return len(self.particles)
 
     def __getitem__(self, idx):
-        inputs = torch.cat(
-            (
-                self.mom[idx].unsqueeze(0),
-                self.tof[idx].unsqueeze(0),
-                self.energy_layers[idx],
-            )
-        )
+        inputs = {
+            "mom": self.mom[idx],
+            "tof": self.tof[idx],
+            "energy_layers": self.energy_layers[idx],
+        }
         target = self.particles[idx]
         return {"input": inputs, "target": target}
 
@@ -105,9 +96,29 @@ class CustomRootDataset(Dataset):
 """ モデルの定義 """
 
 
-class mlpNN(nn.Module):
+class Encoder(nn.Module):
+    def __init__(self, input_size, output_size=1):
+        super().__init__()
+        self.fc1 = nn.Linear(input_size, 16)
+        self.fc2 = nn.Linear(16, 8)
+        self.fc3 = nn.Linear(8, output_size)
+
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        return self.fc3(x)
+
+
+class Classifier(nn.Module):
     def __init__(
-        self, input_size, hidden1_size, hidden2_size, hidden3_size, hidden4_size, hidden5_size, output_size
+        self,
+        input_size,
+        hidden1_size,
+        hidden2_size,
+        hidden3_size,
+        hidden4_size,
+        hidden5_size,
+        output_size,
     ):
         super().__init__()
         self.fc1 = nn.Linear(input_size, hidden1_size)
@@ -126,6 +137,40 @@ class mlpNN(nn.Module):
         return self.fc6(z5)
 
 
+class FullModel(nn.Module):
+    def __init__(
+        self,
+        encoder_input_size,
+        classifier_input_size,
+        hidden1_size,
+        hidden2_size,
+        hidden3_size,
+        hidden4_size,
+        hidden5_size,
+        output_size,
+    ):
+        super().__init__()
+        self.encoder = Encoder(encoder_input_size)
+        self.classifier = Classifier(
+            classifier_input_size,
+            hidden1_size,
+            hidden2_size,
+            hidden3_size,
+            hidden4_size,
+            hidden5_size,
+            output_size,
+        )
+
+    def forward(self, mom, tof, energy_layers):
+        latent = self.encoder(
+            energy_layers
+        )  # dE/dxの32チャンネル情報を一次元の情報latentに変換
+        x = torch.cat(
+            (mom.unsqueeze(1), tof.unsqueeze(1), latent), dim=1
+        )  # mom, tof, latentを結合
+        return self.classifier(x)
+
+
 """ training function """
 
 
@@ -136,9 +181,12 @@ def train_model(model, train_loader, loss_function, optimizer, device="cpu"):
     model.train()
     for batch in train_loader:
         num_train += len(batch["target"])
-        inputs, labels = batch["input"].to(device), batch["target"].to(device)
+        mom = batch["input"]["mom"].to(device)
+        tof = batch["input"]["tof"].to(device)
+        energy_layers = batch["input"]["energy_layers"].to(device)
+        labels = batch["target"].to(device)
         optimizer.zero_grad()
-        outputs = model(inputs)
+        outputs = model(mom, tof, energy_layers)
         loss = loss_function(outputs, labels)
         loss.backward()
         optimizer.step()
@@ -161,8 +209,11 @@ def val_model(model, val_loader, loss_function, device="cpu"):
     with torch.no_grad():
         for batch in val_loader:
             num_val += len(batch["target"])
-            inputs, labels = batch["input"].to(device), batch["target"].to(device)
-            outputs = model(inputs)
+            mom = batch["input"]["mom"].to(device)
+            tof = batch["input"]["tof"].to(device)
+            energy_layers = batch["input"]["energy_layers"].to(device)
+            labels = batch["target"].to(device)
+            outputs = model(mom, tof, energy_layers)
             loss = loss_function(outputs, labels)
             val_loss += loss.item()
             predictions = torch.argmax(outputs, dim=1)
@@ -250,13 +301,12 @@ def learning(
         print(
             f"train_accuracy : {train_accuracy:.5f}, val_accuracy : {val_accuracy:.5f}"
         )
-        print("-----------------------------------------------")
         train_loss_list.append(train_loss)
         val_loss_list.append(val_loss)
         train_accuracy_list.append(train_accuracy)
         val_accuracy_list.append(val_accuracy)
         epoch_list.append(epoch)
-        # ------- pthの保存 -------
+        # 更新されたモデルを保存
         if val_loss < min_loss:
             min_loss = val_loss
             torch.save(
@@ -289,14 +339,15 @@ def format_time(seconds):
 
 
 def main():
+    num_workers = 8
 
     start_time = time.time()  # 計算時間計測開始
-
-    # データを訓練用とテスト用に8:2で分割し、データセット作成
     print("Loading data ...")
     full_dataset = CustomRootDataset(input_root_path, tree_name, sample_fraction)
     dataset_size = len(full_dataset)
-    train_size = int(0.8 * dataset_size)
+    train_size = int(
+        0.8 * dataset_size
+    )  # データを訓練用とテスト用に8:2で分割し、データセット作成
     val_size = dataset_size - train_size
     train_dataset, val_dataset = torch.utils.data.random_split(
         full_dataset, [train_size, val_size]
@@ -310,9 +361,16 @@ def main():
 
     # モデルの再定義と初期化
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = mlpNN(input_size, hidden1_size, hidden2_size, hidden3_size, hidden4_size, hidden5_size, output_size).to(
-        device
-    )
+    model = FullModel(
+        encoder_input_size=32,  # dE/dxのチャンネル数
+        classifier_input_size=3,  # mom, tof, latentの3つの入力
+        hidden1_size=256,
+        hidden2_size=512,
+        hidden3_size=128,
+        hidden4_size=1024,
+        hidden5_size=1024,
+        output_size=3,
+    ).to(device)
 
     print("*********************************")
     print("number of CPU core: ", os.cpu_count())
@@ -329,7 +387,6 @@ def main():
     print("*********************************")
 
     model = model.to(device)
-    # 損失関数とオプティマイザの定義
     loss_function = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01)
     # optimizer = optim.Adam(model.parameters(), lr=0.01)
