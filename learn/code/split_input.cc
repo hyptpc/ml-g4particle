@@ -5,11 +5,11 @@
 void split_input()
 {
     // Open the input file
-    TFile *infile = TFile::Open("/home/had/kohki/work/ML/2024/geant/rootfiles/input.root", "READ");
+    TFile *infile = TFile::Open("/home/had/kohki/work/ML/test/geant/rootfiles/input.root", "READ");
 
     // Create the output files
-    // TFile *outfile_test = new TFile("/home/had/kohki/work/ML/2024/geant/rootfiles/input_test.root", "RECREATE");
-    TFile *outfile_nn = new TFile("/home/had/kohki/work/ML/2024/geant/rootfiles/input_nn.root", "RECREATE");
+    TFile *outfile_test = new TFile("/home/had/kohki/work/ML/test/geant/rootfiles/input_test.root", "RECREATE");
+    // TFile *outfile_nn = new TFile("/home/had/kohki/work/ML/test/geant/rootfiles/input_nn.root", "RECREATE");
 
     // Loop over the layers
     for (int layer = 10; layer <= 32; ++layer)
@@ -18,26 +18,36 @@ void split_input()
         TTree *inTree = (TTree *)infile->Get(Form("tree_%dlayer", layer));
 
         // Create the output trees
-        // TTree *outTree_test = new TTree(Form("tree_%dlayer", layer), Form("Output test tree for %d layer", layer));
-        TTree *outTree_nn = new TTree(Form("tree_%dlayer", layer), Form("Output nn tree for %d layer", layer));
+        TTree *outTree_test = new TTree(Form("tree_%dlayer", layer), Form("Output test tree for %d layer", layer));
+        // TTree *outTree_nn = new TTree(Form("tree_%dlayer", layer), Form("Output nn tree for %d layer", layer));
 
         // Create branches to hold the data
         int pid;
-        double tof, mom, ene;
+        double tof, mom;
+        std::vector<double> ene_layer(layer);
         inTree->SetBranchAddress("pid", &pid);
         inTree->SetBranchAddress("tof", &tof);
         inTree->SetBranchAddress("mom", &mom);
-        inTree->SetBranchAddress("ene", &ene);
+        for (int i = 0; i < layer; ++i)
+        {
+            inTree->SetBranchAddress(Form("ene_layer%d", i), &ene_layer[i]);
+        }
 
-        // outTree_test->Branch("pid", &pid, "pid/I");
-        // outTree_test->Branch("tof", &tof, "tof/D");
-        // outTree_test->Branch("mom", &mom, "mom/D");
-        // outTree_test->Branch("ene", &ene, "ene/D");
+        outTree_test->Branch("pid", &pid, "pid/I");
+        outTree_test->Branch("tof", &tof, "tof/D");
+        outTree_test->Branch("mom", &mom, "mom/D");
+        for (int i = 0; i < layer; ++i)
+        {
+            outTree_test->Branch(Form("ene_layer%d", i), &ene_layer[i], Form("ene_layer%d/D", i));
+        }
 
-        outTree_nn->Branch("pid", &pid, "pid/I");
-        outTree_nn->Branch("tof", &tof, "tof/D");
-        outTree_nn->Branch("mom", &mom, "mom/D");
-        outTree_nn->Branch("ene", &ene, "ene/D");
+        // outTree_nn->Branch("pid", &pid, "pid/I");
+        // outTree_nn->Branch("tof", &tof, "tof/D");
+        // outTree_nn->Branch("mom", &mom, "mom/D");
+        // for (int i = 0; i < layer; ++i)
+        // {
+        //     outTree_nn->Branch(Form("ene_layer%d", i), &ene_layer[i], Form("ene_layer%d/D", i));
+        // }
 
         // Loop over the entries in the input tree
         int nEntries = inTree->GetEntries();
@@ -47,30 +57,30 @@ void split_input()
         for (int i = 0; i < nEntries; ++i)
         {
             inTree->GetEntry(i);
-            // if (i < test_entries)
-            // {
-            //     outTree_test->Fill();
-            // }
-            if (i > test_entries - 1)
+            if (i < test_entries)
             {
-                outTree_nn->Fill();
+                outTree_test->Fill();
             }
+            // if (i > test_entries - 1)
+            // {
+            //     outTree_nn->Fill();
+            // }
         }
 
         // Write the output trees to the respective files
-        // outfile_test->cd();
-        // outTree_test->Write("", TObject::kOverwrite);
+        outfile_test->cd();
+        outTree_test->Write("", TObject::kOverwrite);
 
-        outfile_nn->cd();
-        outTree_nn->Write("", TObject::kOverwrite);
+        // outfile_nn->cd();
+        // outTree_nn->Write("", TObject::kOverwrite);
 
         // Cleanup
-        // delete outTree_test;
-        delete outTree_nn;
+        delete outTree_test;
+        // delete outTree_nn;
     }
 
     // Close the files
     infile->Close();
-    // outfile_test->Close();
-    outfile_nn->Close();
+    outfile_test->Close();
+    // outfile_nn->Close();
 }

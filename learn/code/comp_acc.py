@@ -21,17 +21,20 @@ plt.rcParams["legend.markerscale"] = 2
 plt.figure(figsize=(10, 6))
 
 # ML accuracyをプロットする（誤差バー付き）
-plt.errorbar(df['layers'], df['ML_acc'], yerr=df['ML_err'], label='Machine Learning', fmt='o', capsize=5, linestyle='-', markerfacecolor='white', markeredgewidth=1)
+plt.errorbar(df['layers'], df['ML_acc'], yerr=df['ML_err'], label='Machine Learning (truncated mean)', fmt='o', capsize=5, linestyle='-', markerfacecolor='white', markeredgewidth=1)
+
+# ML accuracyをプロットする（誤差バー付き）
+plt.errorbar(df['layers'], df['ML2_acc'], yerr=df['ML2_err'], label='Machine Learning (individual)', fmt='s', capsize=5, linestyle='-', markerfacecolor='white', markeredgewidth=1)
 
 # Likelihood accuracyをプロットする（誤差バー付き）
-plt.errorbar(df['layers'], df['Likelihood_acc'], yerr=df['Likelihood_err'], label='Likelihood', fmt='^', capsize=5, linestyle='--', markerfacecolor='white', markeredgewidth=1)
+plt.errorbar(df['layers'], df['Likelihood_acc'], yerr=df['Likelihood_err'], label='Conventional Likelihood method ', fmt='^', capsize=5, linestyle='--', markerfacecolor='white', markeredgewidth=1)
 
 # グラフのタイトルとラベルを設定する
 plt.title('Accuracy Transition', fontsize=20, fontweight='bold')
 plt.xlabel('Number of Layers', fontsize=16)
 plt.ylabel('Accuracy', fontsize=16)
 
-plt.ylim(0.9, 1.00)
+plt.ylim(0.8, 1.00)
 
 # 軸の文字サイズを設定し、小数点2桁で表示する
 plt.xticks(fontsize=12)

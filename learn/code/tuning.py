@@ -5,6 +5,7 @@
 # 2024/08/14 K.Amemiya
 # ***************************************
 
+import numpy as np
 import torch.multiprocessing
 import torch
 import torch.nn as nn
@@ -34,7 +35,13 @@ class CustomRootDataset(Dataset):
         self.particles = self.tree["pid"].array()
         self.mom = self.tree["mom"].array()
         self.tof = self.tree["tof"].array()
-        self.energy = self.tree["ene"].array()
+
+        self.energy_layers = []
+        for i in range(32):
+            energy_layer = self.tree[f"ene_layer{i}"].array()
+            self.energy_layers.append(energy_layer)
+
+        self.energy_layers = np.stack(self.energy_layers, axis=-1)
 
         num_samples = int(len(self.particles) * self.sample_fraction)
         print(f"Sampling {num_samples} out of {len(self.particles)} samples")
@@ -42,18 +49,24 @@ class CustomRootDataset(Dataset):
         self.particles = self.particles[indices]
         self.mom = self.mom[indices]
         self.tof = self.tof[indices]
-        self.energy = self.energy[indices]
+        self.energy_layers = self.energy_layers[indices]
 
         self.particles = torch.tensor(self.particles, dtype=torch.long)
         self.mom = torch.tensor(self.mom, dtype=torch.float32)
         self.tof = torch.tensor(self.tof, dtype=torch.float32)
-        self.energy = torch.tensor(self.energy, dtype=torch.float32)
+        self.energy_layers = torch.tensor(self.energy_layers, dtype=torch.float32)
 
     def __len__(self):
         return len(self.particles)
 
     def __getitem__(self, idx):
-        inputs = torch.stack((self.mom[idx], self.tof[idx], self.energy[idx]))
+        inputs = torch.cat(
+            (
+                self.mom[idx].unsqueeze(0),
+                self.tof[idx].unsqueeze(0),
+                self.energy_layers[idx],
+            )
+        )
         target = self.particles[idx]
         return {"input": inputs, "target": target}
 
@@ -130,9 +143,9 @@ def objective(trial):
     hidden_layers = trial.suggest_int("hidden_layers", 2, 6)
     # 各hidden_layerごとに異なるhidden_sizeを探索
     hidden_sizes = [
-    trial.suggest_categorical(f"hidden_size_{i}", [128, 256, 512, 1024])
-    for i in range(hidden_layers)
-]
+        trial.suggest_categorical(f"hidden_size_{i}", [128, 256, 512, 1024])
+        for i in range(hidden_layers)
+    ]
 
     full_dataset = CustomRootDataset(
         input_root_path, tree_name, sample_fraction=0.1
@@ -149,7 +162,7 @@ def objective(trial):
     val_loader = DataLoader(val_dataset, batch_size=256, shuffle=True, num_workers=8)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = MLP_NN(input_size=3, hidden_sizes=hidden_sizes, output_size=3).to(device)
+    model = MLP_NN(input_size=34, hidden_sizes=hidden_sizes, output_size=3).to(device)
 
     loss_function = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01)
@@ -224,7 +237,7 @@ def load_trial_history(input_path):
 
 if __name__ == "__main__":
     n_epoch = 50
-    input_root_path = "/home/had/kohki/work/ML/2024/geant/rootfiles/input_test.root"
+    input_root_path = "/home/had/kohki/work/ML/test/geant/rootfiles/input_test.root"
     tree_name = "tree_32layer"
 
     # Check if a previous study exists
@@ -241,9 +254,9 @@ if __name__ == "__main__":
 
     # トライアル履歴を保存
     save_trial_history(
-        study, "/home/had/kohki/work/ML/2024/learn/csv/trial_history.csv"
+        study, "/home/had/kohki/work/ML/test/learn/csv/trial_history.csv"
     )
-    
+
     # 最良の結果を表示
     best_trial = study.best_trial
     print(f"Best trial number: {best_trial.number}")

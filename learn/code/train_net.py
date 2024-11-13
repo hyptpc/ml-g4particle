@@ -5,7 +5,8 @@
 #  created by K.Amemiya (2024/07/01)
 # ==========================================
 import torch.multiprocessing
-torch.multiprocessing.set_sharing_strategy('file_system')
+
+torch.multiprocessing.set_sharing_strategy("file_system")
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -18,16 +19,32 @@ import os
 import sys
 import time
 
+if len(sys.argv) < 2:
+    print(
+        "Please provide the layer number as an argument (e.g., 'python3 train_net.py 10')."
+    )
+    sys.exit(1)
+
+layer_num = int(sys.argv[1])
+tree_name = f"tree_{layer_num}layer"
+checkpoint_path = f"/home/had/kohki/work/ML/test/learn/pth/train_{layer_num}layer.pth"
+fig_path = f"/home/had/kohki/work/ML/test/learn/figures/train_{layer_num}layer.png"
+input_root_path = "/home/had/kohki/work/ML/test/geant/rootfiles/input_nn.root"
+sample_fraction = 1  # データのサンプリング割合
+
 n_epoch = 50
 num_workers = 8
-input_size = 3
-hidden1_size = 1024
-hidden2_size = 1024
-hidden3_size=256
+input_size = layer_num + 2
+hidden1_size = 256
+hidden2_size = 512
+hidden3_size = 128
+hidden4_size = 1024
+hidden5_size = 1024
 output_size = 3
 
 
 """データセットの定義"""
+
 
 class CustomRootDataset(Dataset):
     def __init__(self, root_file_path, tree_name, sample_fraction):
@@ -44,47 +61,69 @@ class CustomRootDataset(Dataset):
         self.particles = self.tree["pid"].array()
         self.mom = self.tree["mom"].array()
         self.tof = self.tree["tof"].array()
-        self.energy = self.tree["ene"].array()
-        
+
+        self.energy_layers = []
+        for i in range(layer_num):
+            energy_layer = self.tree[f"ene_layer{i}"].array()
+            self.energy_layers.append(energy_layer)
+
+        self.energy_layers = np.stack(self.energy_layers, axis=-1)
+
         # データのサンプリング
         num_samples = int(len(self.particles) * self.sample_fraction)
         print(f"Sampling {num_samples} out of {len(self.particles)} samples")
-        indices = torch.randperm(len(self.particles))[:num_samples]  # Use PyTorch for indexing
+        indices = torch.randperm(len(self.particles))[
+            :num_samples
+        ]  # Use PyTorch for indexing
+
         self.particles = self.particles[indices]
         self.mom = self.mom[indices]
         self.tof = self.tof[indices]
-        self.energy = self.energy[indices]
+        self.energy_layers = self.energy_layers[indices]
 
         # Convert to PyTorch tensors
         self.particles = torch.tensor(self.particles, dtype=torch.long)
         self.mom = torch.tensor(self.mom, dtype=torch.float32)
         self.tof = torch.tensor(self.tof, dtype=torch.float32)
-        self.energy = torch.tensor(self.energy, dtype=torch.float32)
+        self.energy_layers = torch.tensor(self.energy_layers, dtype=torch.float32)
 
     def __len__(self):
         return len(self.particles)
 
     def __getitem__(self, idx):
-        inputs = torch.stack((self.mom[idx], self.tof[idx], self.energy[idx]))
+        inputs = torch.cat(
+            (
+                self.mom[idx].unsqueeze(0),
+                self.tof[idx].unsqueeze(0),
+                self.energy_layers[idx],
+            )
+        )
         target = self.particles[idx]
         return {"input": inputs, "target": target}
 
 
 """ モデルの定義 """
 
+
 class mlpNN(nn.Module):
-    def __init__(self, input_size, hidden1_size, hidden2_size, hidden3_size, output_size):
+    def __init__(
+        self, input_size, hidden1_size, hidden2_size, hidden3_size, hidden4_size, hidden5_size, output_size
+    ):
         super().__init__()
         self.fc1 = nn.Linear(input_size, hidden1_size)
         self.fc2 = nn.Linear(hidden1_size, hidden2_size)
         self.fc3 = nn.Linear(hidden2_size, hidden3_size)
-        self.fc4 = nn.Linear(hidden3_size, output_size)
+        self.fc4 = nn.Linear(hidden3_size, hidden4_size)
+        self.fc5 = nn.Linear(hidden4_size, hidden5_size)
+        self.fc6 = nn.Linear(hidden5_size, output_size)
 
     def forward(self, x):
         z1 = F.relu(self.fc1(x))
         z2 = F.relu(self.fc2(z1))
         z3 = F.relu(self.fc3(z2))
-        return self.fc4(z3)
+        z4 = F.relu(self.fc4(z3))
+        z5 = F.relu(self.fc5(z4))
+        return self.fc6(z5)
 
 
 """ training function """
@@ -109,6 +148,7 @@ def train_model(model, train_loader, loss_function, optimizer, device="cpu"):
     train_loss /= len(train_loader)
     train_accuracy /= num_train
     return train_loss, train_accuracy
+
 
 """ val function """
 
@@ -149,7 +189,7 @@ def plot_figures(
     plt.title("Training and validation accuracy")
     plt.grid()
     # plt.tight_layout()
-    
+
     plt.subplot(1, 2, 2)
     plt.plot(train_loss_list, c="blue", label="train", linestyle="--")
     plt.plot(val_loss_list, c="red", label="val", linestyle="-")
@@ -210,9 +250,7 @@ def learning(
         print(
             f"train_accuracy : {train_accuracy:.5f}, val_accuracy : {val_accuracy:.5f}"
         )
-        print(
-            "-----------------------------------------------"
-        )
+        print("-----------------------------------------------")
         train_loss_list.append(train_loss)
         val_loss_list.append(val_loss)
         train_accuracy_list.append(train_accuracy)
@@ -238,7 +276,6 @@ def learning(
     return train_loss_list, val_loss_list, train_accuracy_list, val_accuracy_list
 
 
-
 """ 時間表示フォーマット """
 
 
@@ -252,16 +289,7 @@ def format_time(seconds):
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("Please provide the layer number as an argument (e.g., 'python3 train_net.py 10').")
-        sys.exit(1)
-    layer_num = int(sys.argv[1])
-    tree_name = f"tree_{layer_num}layer"
-    checkpoint_path = f"/home/had/kohki/work/ML/2024/learn/pth/train_{layer_num}layer.pth"
-    fig_path = f"/home/had/kohki/work/ML/2024/learn/figures/train_{layer_num}layer.png"
-    input_root_path = "/home/had/kohki/work/ML/2024/geant/rootfiles/input_nn.root"
-    sample_fraction = 1 # データのサンプリング割合
-    
+
     start_time = time.time()  # 計算時間計測開始
 
     # データを訓練用とテスト用に8:2で分割し、データセット作成
@@ -282,7 +310,9 @@ def main():
 
     # モデルの再定義と初期化
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = mlpNN(input_size, hidden1_size, hidden2_size, hidden3_size, output_size).to(device)
+    model = mlpNN(input_size, hidden1_size, hidden2_size, hidden3_size, hidden4_size, hidden5_size, output_size).to(
+        device
+    )
 
     print("*********************************")
     print("number of CPU core: ", os.cpu_count())

@@ -8,20 +8,28 @@
 
 #!/bin/bash
 
-for layer in {10..32}; do
-    bsub -q hx python3 test_net.py $layer
-done
+# for layer in {10..32}; do
+#     bsub -q s python3 test_net.py $layer
+# done
 
-bjobs -w | grep -q "PEND\|RUN"
-while [ $? -eq 0 ]
-do
-    echo "Waiting for all jobs to finish..."
-    sleep 60
-    bjobs -w | grep -q "PEND\|RUN"
+# bjobs -w | grep -q "PEND\|RUN"
+# while [ $? -eq 0 ]
+# do
+#     echo "Waiting for all jobs to finish..."
+#     sleep 60
+#     bjobs -w | grep -q "PEND\|RUN"
+# done
+for layer in {10..32}; do
+    python3 test_net.py $layer
+    if [ $? -ne 0 ]; then
+        echo "Error occurred during execution of layer $layer. Exiting..."
+        exit 1
+    fi
 done
 
 # integrate all output rootfiles
-cd /home/had/kohki/work/ML/2024/geant/rootfiles
+cd /home/had/kohki/work/ML/test/geant/rootfiles
+rm -rf output.root
 hadd output.root output_*layer.root
 
 # wait until merging is finished, and delete tmp rootfiles
