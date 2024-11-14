@@ -147,7 +147,7 @@ def main():
     ]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = FullModel(
-        input_size=layer_num,
+        layer_num=layer_num,
         encoder_hidden_sizes=encoder_hidden_sizes,
         classifier_hidden_sizes=classifier_hidden_sizes,
     ).to(device)
