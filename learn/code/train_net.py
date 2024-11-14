@@ -4,6 +4,7 @@
 #
 #  created by K.Amemiya (2024/07/01)
 # ==========================================
+
 import torch.multiprocessing
 
 torch.multiprocessing.set_sharing_strategy("file_system")
@@ -11,245 +12,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.utils.data import DataLoader, Dataset
-import uproot3
-import numpy as np
-import matplotlib.pyplot as plt
+from torch.utils.data import DataLoader
 import os
 import sys
-import time
-
-if len(sys.argv) < 2:
-    print(
-        "Please provide the layer number as an argument (e.g., 'python3 train_net.py 10')."
-    )
-    sys.exit(1)
-
-layer_num = int(sys.argv[1])
-tree_name = f"tree_{layer_num}layer"
-checkpoint_path = (
-    f"/home/had/kohki/work/ML/2024nov/learn/pth/train_{layer_num}layer.pth"
-)
-fig_path = f"/home/had/kohki/work/ML/2024nov/learn/figures/train_{layer_num}layer.png"
-input_root_path = "/home/had/kohki/work/ML/2024nov/geant/rootfiles/input_nn.root"
-sample_fraction = 1  # データのサンプリング割合
-n_epoch = 50
-
-
-"""データセットの定義"""
-
-
-class CustomRootDataset(Dataset):
-    def __init__(self, root_file_path, tree_name, sample_fraction):
-        self.root_file_path = root_file_path
-        self.tree_name = tree_name
-        self.sample_fraction = sample_fraction
-        self._load_data()
-
-    def _load_data(self):
-        self.root_file = uproot3.open(self.root_file_path)
-        self.tree = self.root_file[self.tree_name]
-
-        # データのバッチ読み込み
-        self.particles = self.tree["pid"].array()
-        self.mom = self.tree["mom"].array()
-        self.tof = self.tree["tof"].array()
-
-        self.energy_layers = []
-        for i in range(layer_num):
-            energy_layer = self.tree[f"ene_layer{i}"].array()
-            self.energy_layers.append(energy_layer)
-
-        self.energy_layers = np.stack(self.energy_layers, axis=-1)
-
-        # データのサンプリング
-        num_samples = int(len(self.particles) * self.sample_fraction)
-        print(f"Sampling {num_samples} out of {len(self.particles)} samples")
-        indices = torch.randperm(len(self.particles))[
-            :num_samples
-        ]  # Use PyTorch for indexing
-
-        self.particles = self.particles[indices]
-        self.mom = self.mom[indices]
-        self.tof = self.tof[indices]
-        self.energy_layers = self.energy_layers[indices]
-
-        # Convert to PyTorch tensors
-        self.particles = torch.tensor(self.particles, dtype=torch.long)
-        self.mom = torch.tensor(self.mom, dtype=torch.float32)
-        self.tof = torch.tensor(self.tof, dtype=torch.float32)
-        self.energy_layers = torch.tensor(self.energy_layers, dtype=torch.float32)
-
-    def __len__(self):
-        return len(self.particles)
-
-    def __getitem__(self, idx):
-        inputs = {
-            "mom": self.mom[idx],
-            "tof": self.tof[idx],
-            "energy_layers": self.energy_layers[idx],
-        }
-        target = self.particles[idx]
-        return {"input": inputs, "target": target}
-
-
-""" モデルの定義 """
-
-
-class Encoder(nn.Module):
-    def __init__(self, input_size, output_size=1):
-        super().__init__()
-        self.fc1 = nn.Linear(input_size, 16)
-        self.fc2 = nn.Linear(16, 8)
-        self.fc3 = nn.Linear(8, output_size)
-
-    def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        return self.fc3(x)
-
-
-class Classifier(nn.Module):
-    def __init__(
-        self,
-        input_size,
-        hidden1_size,
-        hidden2_size,
-        hidden3_size,
-        hidden4_size,
-        hidden5_size,
-        output_size,
-    ):
-        super().__init__()
-        self.fc1 = nn.Linear(input_size, hidden1_size)
-        self.fc2 = nn.Linear(hidden1_size, hidden2_size)
-        self.fc3 = nn.Linear(hidden2_size, hidden3_size)
-        self.fc4 = nn.Linear(hidden3_size, hidden4_size)
-        self.fc5 = nn.Linear(hidden4_size, hidden5_size)
-        self.fc6 = nn.Linear(hidden5_size, output_size)
-
-    def forward(self, x):
-        z1 = F.relu(self.fc1(x))
-        z2 = F.relu(self.fc2(z1))
-        z3 = F.relu(self.fc3(z2))
-        z4 = F.relu(self.fc4(z3))
-        z5 = F.relu(self.fc5(z4))
-        return self.fc6(z5)
-
-
-class FullModel(nn.Module):
-    def __init__(
-        self,
-        encoder_input_size,
-        classifier_input_size,
-        hidden1_size,
-        hidden2_size,
-        hidden3_size,
-        hidden4_size,
-        hidden5_size,
-        output_size,
-    ):
-        super().__init__()
-        self.encoder = Encoder(encoder_input_size)
-        self.classifier = Classifier(
-            classifier_input_size,
-            hidden1_size,
-            hidden2_size,
-            hidden3_size,
-            hidden4_size,
-            hidden5_size,
-            output_size,
-        )
-
-    def forward(self, mom, tof, energy_layers):
-        latent = self.encoder(
-            energy_layers
-        )  # dE/dxの32チャンネル情報を一次元の情報latentに変換
-        x = torch.cat(
-            (mom.unsqueeze(1), tof.unsqueeze(1), latent), dim=1
-        )  # mom, tof, latentを結合
-        return self.classifier(x)
-
-
-""" training function """
-
-
-def train_model(model, train_loader, loss_function, optimizer, device="cpu"):
-    train_loss = 0.0
-    num_train = 0
-    train_accuracy = 0.0
-    model.train()
-    for batch in train_loader:
-        num_train += len(batch["target"])
-        mom = batch["input"]["mom"].to(device)
-        tof = batch["input"]["tof"].to(device)
-        energy_layers = batch["input"]["energy_layers"].to(device)
-        labels = batch["target"].to(device)
-        optimizer.zero_grad()
-        outputs = model(mom, tof, energy_layers)
-        loss = loss_function(outputs, labels)
-        loss.backward()
-        optimizer.step()
-        predictions = torch.argmax(outputs, dim=1)
-        train_loss += loss.item()
-        train_accuracy += (predictions == labels).sum().item()
-    train_loss /= len(train_loader)
-    train_accuracy /= num_train
-    return train_loss, train_accuracy
-
-
-""" val function """
-
-
-def val_model(model, val_loader, loss_function, device="cpu"):
-    val_loss = 0.0
-    val_accuracy = 0.0
-    num_val = 0
-    model.eval()
-    with torch.no_grad():
-        for batch in val_loader:
-            num_val += len(batch["target"])
-            mom = batch["input"]["mom"].to(device)
-            tof = batch["input"]["tof"].to(device)
-            energy_layers = batch["input"]["energy_layers"].to(device)
-            labels = batch["target"].to(device)
-            outputs = model(mom, tof, energy_layers)
-            loss = loss_function(outputs, labels)
-            val_loss += loss.item()
-            predictions = torch.argmax(outputs, dim=1)
-            val_accuracy += (predictions == labels).sum().item()
-    val_loss /= len(val_loader)
-    val_accuracy /= num_val
-    return val_loss, val_accuracy
-
-
-"""'正答率と損失関数をプロット"""
-
-
-def plot_figures(
-    train_loss_list, val_loss_list, train_accuracy_list, val_accuracy_list, fig_path
-):
-
-    plt.figure(figsize=(10, 4))
-    plt.subplot(1, 2, 1)
-    plt.plot(train_accuracy_list, c="blue", label="train", linestyle="--")
-    plt.plot(val_accuracy_list, c="red", label="val", linestyle="-")
-    plt.legend()
-    plt.xlabel("epoch", fontsize=10)
-    plt.ylabel("accuracy", fontsize=10)
-    plt.title("Training and validation accuracy")
-    plt.grid()
-    # plt.tight_layout()
-
-    plt.subplot(1, 2, 2)
-    plt.plot(train_loss_list, c="blue", label="train", linestyle="--")
-    plt.plot(val_loss_list, c="red", label="val", linestyle="-")
-    plt.legend()
-    plt.xlabel("epoch", fontsize=10)
-    plt.ylabel("loss", fontsize=10)
-    plt.title("Training and validation loss")
-    plt.grid()
-    plt.savefig(fig_path)
+from include.dataset import CustomRootDataset
+from include.models import FullModel
+from include.utils import train_model, val_model, plot_figures, load_params
 
 
 """ leaning function """
@@ -326,24 +94,31 @@ def learning(
     return train_loss_list, val_loss_list, train_accuracy_list, val_accuracy_list
 
 
-""" 時間表示フォーマット """
-
-
-def format_time(seconds):
-    m, s = divmod(seconds, 60)
-    h, m = divmod(m, 60)
-    return f"{int(h):02d}:{int(m):02d}:{int(s):02d}"
-
-
 """ メイン関数 """
 
 
 def main():
-    num_workers = 8
+    if len(sys.argv) < 2:
+        print(
+            "Please provide the layer number as an argument (e.g., 'python3 train_net.py 10')."
+        )
+        sys.exit(1)
 
-    start_time = time.time()  # 計算時間計測開始
+    layer_num = int(sys.argv[1])
+    tree_name = f"tree_{layer_num}layer"
+    checkpoint_path = (
+        f"/home/had/kohki/work/ML/2024nov/learn/pth/train_{layer_num}layer.pth"
+    )
+    fig_path = (
+        f"/home/had/kohki/work/ML/2024nov/learn/figures/train_{layer_num}layer.png"
+    )
+    input_root_path = "/home/had/kohki/work/ML/2024nov/geant/rootfiles/input_nn.root"
+    n_epoch = 50
+
     print("Loading data ...")
-    full_dataset = CustomRootDataset(input_root_path, tree_name, sample_fraction)
+    full_dataset = CustomRootDataset(
+        input_root_path, tree_name, layer_num, sample_fraction=1.0
+    )
     dataset_size = len(full_dataset)
     train_size = int(
         0.8 * dataset_size
@@ -352,6 +127,7 @@ def main():
     train_dataset, val_dataset = torch.utils.data.random_split(
         full_dataset, [train_size, val_size]
     )
+    num_workers = 8
     train_loader = DataLoader(
         train_dataset, batch_size=256, shuffle=True, num_workers=num_workers
     )
@@ -359,18 +135,25 @@ def main():
         val_dataset, batch_size=256, shuffle=True, num_workers=num_workers
     )
 
-    # モデルの再定義と初期化
+    # モデルの初期化
+    params = load_params("tuned_params.json")
+    encoder_hidden_sizes = [
+        params[f"encoder_hidden_size_{i}"]
+        for i in range(params["encoder_hidden_layers"])
+    ]
+    classifier_hidden_sizes = [
+        params[f"classifier_hidden_size_{i}"]
+        for i in range(params["classifier_hidden_layers"])
+    ]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = FullModel(
-        encoder_input_size=32,  # dE/dxのチャンネル数
-        classifier_input_size=3,  # mom, tof, latentの3つの入力
-        hidden1_size=256,
-        hidden2_size=512,
-        hidden3_size=128,
-        hidden4_size=1024,
-        hidden5_size=1024,
-        output_size=3,
+        input_size=layer_num,
+        encoder_hidden_sizes=encoder_hidden_sizes,
+        classifier_hidden_sizes=classifier_hidden_sizes,
     ).to(device)
+    loss_function = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(model.parameters(), lr=0.01)
+    # optimizer = optim.Adam(model.parameters(), lr=0.01)
 
     print("*********************************")
     print("number of CPU core: ", os.cpu_count())
@@ -386,12 +169,7 @@ def main():
         print("no gpu available")
     print("*********************************")
 
-    model = model.to(device)
-    loss_function = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.01)
-    # optimizer = optim.Adam(model.parameters(), lr=0.01)
-
-    # learning process
+    # 学習
     train_loss_list, val_loss_list, train_accuracy_list, val_accuracy_list = learning(
         checkpoint_path,
         model,
@@ -406,10 +184,6 @@ def main():
     plot_figures(
         train_loss_list, val_loss_list, train_accuracy_list, val_accuracy_list, fig_path
     )
-
-    end_time = time.time()  # 計算時間計測終了
-    total_time = end_time - start_time
-    print(f"All finished! processing time:  {format_time(total_time)}")
 
 
 if __name__ == "__main__":
