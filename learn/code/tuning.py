@@ -19,7 +19,7 @@ from include.models import FullModel
 from include.utils import train_model, val_model
 
 n_epoch = 50
-input_root_path = "/home/had/kohki/work/ML/2024nov/geant/rootfiles/input_nn.root"
+input_root_path = "../../geant/rootfiles/input_nn.root"
 layer_num = 32  # 簡単のために32layerのテータのみを考慮
 tree_name = "tree_32layer"
 sample_fraction = 0.01  # 効率化のためにテストデータのうち1%のデータのみを使用

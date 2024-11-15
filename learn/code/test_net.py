@@ -8,37 +8,20 @@ import uproot3
 import numpy as np
 import pandas as pd
 from torch.utils.data import DataLoader
-from train_net import (
-    mlpNN,
-    CustomRootDataset,
-    input_size,
-    hidden1_size,
-    hidden2_size,
-    hidden3_size,
-    hidden4_size,
-    hidden5_size,
-    output_size,
-    num_workers,
-)
-
-if len(sys.argv) < 2:
-    print(
-        "Please provide the layer number as an argument (e.g., 'python3 test_net.py 10')."
-    )
-    sys.exit(1)
-layer_num = int(sys.argv[1])
-tree_name = f"tree_{layer_num}layer"
-test_root_path = "/home/had/kohki/work/ML/test/geant/rootfiles/input_test.root"
-output_root_path = (
-    f"/home/had/kohki/work/ML/test/geant/rootfiles/output_{layer_num}layer.root"
-)
-checkpoint_path = f"/home/had/kohki/work/ML/test/learn/pth/train_{layer_num}layer.pth"
-csv_path = "../csv/accuracy.csv"
-sample_fraction = 1  # Use all data
+from include.dataset import CustomRootDataset
+from include.models import FullModel
+from include.utils import load_params
 
 
 def fill_rootfile(
-    model, test_loader, checkpoint_path, output_root_path, tree_name, device="cpu"
+    model,
+    test_loader,
+    checkpoint_path,
+    output_root_path,
+    csv_path,
+    tree_name,
+    layer_num,
+    device="cpu",
 ):
     checkpoint = torch.load(checkpoint_path)
     model.load_state_dict(checkpoint["model"])
@@ -78,8 +61,8 @@ def fill_rootfile(
 
     # Save the results to a CSV file
     df = pd.read_csv(csv_path)
-    df.loc[df["layers"] == layer_num, "ML2_acc"] = round(accuracy, 4)
-    df.loc[df["layers"] == layer_num, "ML2_err"] = round(error, 9)
+    df.loc[df["layers"] == layer_num, "ML3_acc"] = round(accuracy, 4)
+    df.loc[df["layers"] == layer_num, "ML3_err"] = round(error, 9)
     df.to_csv(csv_path, index=False)
     print(f"Results saved to {csv_path}")
 
@@ -110,29 +93,52 @@ def fill_rootfile(
 
 def main():
 
+    if len(sys.argv) < 2:
+        print(
+            "Please provide the layer number as an argument (e.g., 'python3 test_net.py 10')."
+        )
+        sys.exit(1)
+    layer_num = int(sys.argv[1])
+    tree_name = f"tree_{layer_num}layer"
+    test_root_path = "../../geant/rootfiles/input_test.root"
+    output_root_path = f"../../geant/rootfiles/output_{layer_num}layer.root"
+    checkpoint_path = f"../pth/train_{layer_num}layer.pth"
+    csv_path = "../csv/accuracy.csv"
+    sample_fraction = 1  # Use all data
+
     print("Loading data ...")
     test_dataset = CustomRootDataset(test_root_path, tree_name, sample_fraction)
-    test_loader = DataLoader(
-        test_dataset, batch_size=256, shuffle=False, num_workers=num_workers
-    )
+    test_loader = DataLoader(test_dataset, batch_size=256, shuffle=False, num_workers=8)
 
-    # Initialize the model
+    # モデルの初期化
+    params = load_params("tuned_params.json")
+    encoder_hidden_sizes = [
+        params[f"encoder_hidden_size_{i}"]
+        for i in range(params["encoder_hidden_layers"])
+    ]
+    classifier_hidden_sizes = [
+        params[f"classifier_hidden_size_{i}"]
+        for i in range(params["classifier_hidden_layers"])
+    ]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = mlpNN(
-        input_size,
-        hidden1_size,
-        hidden2_size,
-        hidden3_size,
-        hidden4_size,
-        hidden5_size,
-        output_size,
+    model = FullModel(
+        layer_num=layer_num,
+        encoder_hidden_sizes=encoder_hidden_sizes,
+        classifier_hidden_sizes=classifier_hidden_sizes,
     ).to(device)
     if torch.cuda.is_available() and torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
 
-    # save data to csv / root file
+    # save data to rootfile and csv
     fill_rootfile(
-        model, test_loader, checkpoint_path, output_root_path, tree_name, device=device
+        model,
+        test_loader,
+        checkpoint_path,
+        output_root_path,
+        csv_path,
+        tree_name,
+        layer_num,
+        device=device,
     )
     print(f"Results saved to {output_root_path}")
 

@@ -2,7 +2,7 @@
 #   input: particle, mom, tof, ene
 #   output: particle_ML
 #
-#  created by K.Amemiya (2024/07/01)
+#  created by K.Amemiya (2024/11/14)
 # ==========================================
 
 import torch.multiprocessing
@@ -106,13 +106,9 @@ def main():
 
     layer_num = int(sys.argv[1])
     tree_name = f"tree_{layer_num}layer"
-    checkpoint_path = (
-        f"/home/had/kohki/work/ML/2024nov/learn/pth/train_{layer_num}layer.pth"
-    )
-    fig_path = (
-        f"/home/had/kohki/work/ML/2024nov/learn/figures/train_{layer_num}layer.png"
-    )
-    input_root_path = "/home/had/kohki/work/ML/2024nov/geant/rootfiles/input_nn.root"
+    checkpoint_path = f"../pth/train_{layer_num}layer.pth"
+    fig_path = f"../figures/train_{layer_num}layer.png"
+    input_root_path = "../../geant/rootfiles/input_nn.root"
     n_epoch = 50
 
     print("Loading data ...")
