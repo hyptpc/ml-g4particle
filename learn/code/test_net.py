@@ -5,6 +5,7 @@ import torch.multiprocessing
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 import sys
+import os
 import torch
 import uproot3
 import numpy as np
@@ -61,10 +62,9 @@ def fill_rootfile(
 
     print(f"Accuracy: {accuracy:.4f}, Error: {error:.9f}")
 
-    # Save the results to a CSV file
-    df = pd.read_csv(csv_path)
-    df.loc[df["layers"] == layer_num, "ML3_acc"] = round(accuracy, 4)
-    df.loc[df["layers"] == layer_num, "ML3_err"] = round(error, 9)
+    df = pd.DataFrame(columns=["layers", "acc", "err"])
+    df.loc[df["layers"] == layer_num, "acc"] = round(accuracy, 4)
+    df.loc[df["layers"] == layer_num, "err"] = round(error, 9)
     df.to_csv(csv_path, index=False)
     print(f"Results saved to {csv_path}")
 
@@ -105,7 +105,7 @@ def main():
     test_root_path = "../../geant/rootfiles/input_test.root"
     output_root_path = f"../../geant/rootfiles/output_{layer_num}layer.root"
     checkpoint_path = f"../pth/train_{layer_num}layer.pth"
-    csv_path = "../csv/accuracy.csv"
+    csv_path = "../../likelihood/csv/accuracy.csv"
     sample_fraction = 1  # Use all data
 
     print("Loading data ...")

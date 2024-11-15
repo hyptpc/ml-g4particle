@@ -2,6 +2,7 @@
 *.png
 *.root
 *.db
+*.csv
 .venv/
 .vscode/
 __pycache__
@@ -9,3 +10,4 @@ sou*~
 G4History.macro
 tmp/
 bin/
+
