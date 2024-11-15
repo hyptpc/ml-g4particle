@@ -84,13 +84,13 @@ void read_data(const std::vector<std::string> &filenames, const std::vector<int>
 void mkinput(int layer)
 {
     std::vector<std::string> filenames = {
-        "/home/had/kohki/work/ML/2024nov/geant/rootfiles/proton_raw.root",
-        "/home/had/kohki/work/ML/2024nov/geant/rootfiles/pion_raw.root",
-        "/home/had/kohki/work/ML/2024nov/geant/rootfiles/kaon_raw.root"};
+        "../../geant/rootfiles/proton_raw.root",
+        "../../geant/rootfiles/pion_raw.root",
+        "../../geant/rootfiles/kaon_raw.root"};
 
     std::vector<int> particle_ids = {0, 1, 2};
 
-    TFile *outfile = new TFile(Form("/home/had/kohki/work/ML/2024nov/geant/rootfiles/input%dlayer.root", layer), "RECREATE");
+    TFile *outfile = new TFile(Form("../../geant/rootfiles/input%dlayer.root", layer), "RECREATE");
 
     int particle_id;
     double tof;

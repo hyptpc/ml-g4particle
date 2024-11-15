@@ -1,4 +1,6 @@
 # test_net.py
+# created by K.Amemiya (2024/11/15)
+
 import torch.multiprocessing
 
 torch.multiprocessing.set_sharing_strategy("file_system")

@@ -16,12 +16,14 @@ from sklearn.metrics import accuracy_score
 import sys
 
 if len(sys.argv) < 2:
-        print("Please provide the layer number as an argument (e.g., 'python3 confmatrix.py 10').")
-        sys.exit(1)
+    print(
+        "Please provide the layer number as an argument (e.g., 'python3 confmatrix.py 10')."
+    )
+    sys.exit(1)
 num_layer = int(sys.argv[1])
 
 # ROOTファイルからデータを読み込む
-file = uproot3.open(f"/home/had/kohki/work/ML/test/geant/rootfiles/output.root")
+file = uproot3.open(f"../../geant/rootfiles/output.root")
 tree = file[f"tree_{num_layer}layer"]
 # ブランチからデータを取得
 particle_data = tree.array("pid")
@@ -33,8 +35,7 @@ class_labels = {0: r"$P$", 1: r"$\pi$", 2: r"$K$"}
 conf_matrix = confusion_matrix(particle_data, particle_ml_data)
 
 # 規格化された混同行列を計算
-norm_conf_matrix = conf_matrix.astype(
-    'float') / conf_matrix.sum(axis=1)[:, np.newaxis]
+norm_conf_matrix = conf_matrix.astype("float") / conf_matrix.sum(axis=1)[:, np.newaxis]
 
 # ヒートマップを作成
 sns.heatmap(

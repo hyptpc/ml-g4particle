@@ -5,10 +5,10 @@
 void split_input()
 {
     // Open the input file
-    TFile *infile = TFile::Open("/home/had/kohki/work/ML/test/geant/rootfiles/input.root", "READ");
+    TFile *infile = TFile::Open("../../geant/rootfiles/input.root", "READ");
 
     // Create the output files
-    TFile *outfile_test = new TFile("/home/had/kohki/work/ML/test/geant/rootfiles/input_test.root", "RECREATE");
+    TFile *outfile_test = new TFile("../../geant/rootfiles/input_test.root", "RECREATE");
     // TFile *outfile_nn = new TFile("/home/had/kohki/work/ML/test/geant/rootfiles/input_nn.root", "RECREATE");
 
     // Loop over the layers
