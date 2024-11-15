@@ -1,6 +1,5 @@
 *.pth
 *.png
-*.csv
 *.root
 *.db
 .venv/

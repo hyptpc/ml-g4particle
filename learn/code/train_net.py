@@ -109,7 +109,7 @@ def main():
     checkpoint_path = f"../pth/train_{layer_num}layer.pth"
     fig_path = f"../figures/train_{layer_num}layer.png"
     input_root_path = "../../geant/rootfiles/input_nn.root"
-    n_epoch = 50
+    n_epoch = 100
 
     print("Loading data ...")
     full_dataset = CustomRootDataset(
