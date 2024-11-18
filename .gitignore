@@ -3,7 +3,6 @@
 *.root
 *.db
 *.csv
-.venv/
 .vscode/
 __pycache__
 sou*~

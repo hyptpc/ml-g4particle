@@ -2,7 +2,6 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-
 class Encoder(nn.Module):
     def __init__(self, input_size, hidden_sizes, output_size=1):
         super().__init__()
@@ -44,7 +43,7 @@ class FullModel(nn.Module):
         )
 
     def forward(self, mom, tof, energy_layers):
-        latent = self.encoder(energy_layers)  # 32chのde/dxを1次元の情報に変換
+        latent = self.encoder(energy_layers)  # 多chのde/dxを1次元の情報に変換
         x = torch.cat(
             (mom.unsqueeze(1), tof.unsqueeze(1), latent), dim=1
         )  # mom, tof, latentを結合

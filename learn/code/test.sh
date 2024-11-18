@@ -8,9 +8,9 @@
 
 #!/bin/bash
 
-# for layer in {10..32}; do
-#     bsub -q s python3 test_net.py $layer
-# done
+for layer in {10..32}; do
+    bsub -q s python3 test_net.py $layer
+done
 
 bjobs -w | grep -q "PEND\|RUN"
 while [ $? -eq 0 ]
@@ -18,14 +18,6 @@ do
     echo "Waiting for all jobs to finish..."
     sleep 60
     bjobs -w | grep -q "PEND\|RUN"
-done
-
-for layer in {10..32}; do
-    python3 test_net.py $layer
-    if [ $? -ne 0 ]; then
-        echo "Error occurred during execution of layer $layer. Exiting..."
-        exit 1
-    fi
 done
 
 # integrate all output rootfiles

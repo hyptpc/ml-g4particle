@@ -38,33 +38,59 @@ def fill_rootfile(
     num_test = 0
     correct_predictions = 0
 
-    for i, batch in enumerate(test_loader):
-        num_test += len(batch["target"])
-        inputs, labels = batch["input"].to(device), batch["target"].to(device)
-        particle_ = labels.cpu().numpy()
-        outputs = model(inputs)
-        particle_ML = torch.argmax(outputs, dim=1).cpu().numpy()
-        correct_predictions += np.sum(particle_ == particle_ML)
-        for j in range(len(labels)):
-            mom = inputs[j, 0]
-            write_mom.append(mom.cpu().numpy())
-            tof = inputs[j, 1]
-            write_tof.append(tof.cpu().numpy())
-            for layer in range(layer_num):
-                ene = inputs[j, 2 + layer]  # Energy layers start from index 2
-                write_ene[layer].append(ene.cpu().numpy())
-            particle = particle_[j]
-            write_particle.append(particle)
-            write_particle_ML.append(particle_ML[j])
+    # 推論
+    model.eval()
+    with torch.no_grad():
+        for i, batch in enumerate(test_loader):
+            num_test += len(batch["target"])
+            mom = batch["input"]["mom"].to(device)
+            tof = batch["input"]["tof"].to(device)
+            energy_layers = batch["input"]["energy_layers"].to(device)
+            labels = batch["target"].to(device)
+            particle_ = labels.cpu().numpy()
+            outputs = model(mom, tof, energy_layers)
+            particle_ML = torch.argmax(outputs, dim=1).cpu().numpy()
+            correct_predictions += np.sum(particle_ == particle_ML)
+
+            for j in range(len(labels)):
+                write_mom.append(mom[j].cpu().numpy())
+                write_tof.append(tof[j].cpu().numpy())
+                for layer in range(layer_num):
+                    ene = energy_layers[j, layer]
+                    write_ene[layer].append(ene.cpu().numpy())
+                particle = particle_[j]
+                write_particle.append(particle)
+                write_particle_ML.append(particle_ML[j])
 
     accuracy = correct_predictions / num_test
     error = np.sqrt(accuracy * (1 - accuracy) / num_test)
 
     print(f"Accuracy: {accuracy:.4f}, Error: {error:.9f}")
 
+    # csvの作成
     df = pd.DataFrame(columns=["layers", "acc", "err"])
-    df.loc[df["layers"] == layer_num, "acc"] = round(accuracy, 4)
-    df.loc[df["layers"] == layer_num, "err"] = round(error, 9)
+    df = pd.concat(
+        [
+            df,
+            pd.DataFrame(
+                {
+                    "layers": [layer_num],
+                    "acc": [round(accuracy, 4)],
+                    "err": [round(error, 9)],
+                }
+            ),
+        ]
+    )
+
+    # 既存のCSVファイルが存在する場合は読み込む
+    if os.path.exists(csv_path):
+        existing_df = pd.read_csv(csv_path)
+        df = pd.concat([existing_df, df])
+
+    # layersを昇順にソート
+    df = df.sort_values(by="layers").reset_index(drop=True)
+
+    # CSVファイルに保存
     df.to_csv(csv_path, index=False)
     print(f"Results saved to {csv_path}")
 
@@ -109,7 +135,9 @@ def main():
     sample_fraction = 1  # Use all data
 
     print("Loading data ...")
-    test_dataset = CustomRootDataset(test_root_path, tree_name, sample_fraction)
+    test_dataset = CustomRootDataset(
+        test_root_path, tree_name, layer_num, sample_fraction
+    )
     test_loader = DataLoader(test_dataset, batch_size=256, shuffle=False, num_workers=8)
 
     # モデルの初期化
