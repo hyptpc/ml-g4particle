@@ -3,6 +3,7 @@
 *.root
 *.db
 *.csv
+*.json
 .vscode/
 __pycache__
 sou*~
