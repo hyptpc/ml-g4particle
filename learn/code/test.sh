@@ -9,21 +9,17 @@
 #!/bin/bash
 
 for layer in {10..32}; do
-    bsub -q s python3 test_net.py $layer
-done
-
-bjobs -w | grep -q "PEND\|RUN"
-while [ $? -eq 0 ]
-do
-    echo "Waiting for all jobs to finish..."
-    sleep 60
-    bjobs -w | grep -q "PEND\|RUN"
+    python3 test_net.py $layer
+    if [ $? -ne 0 ]; then
+        echo "Error occurred during processing of layer $layer. Exiting..."
+        exit 1
+    fi
 done
 
 # integrate all output rootfiles
 cd ../../geant/rootfiles
-rm -rf output.root
-hadd output.root output_*layer.root
+rm -rf output_1.root
+hadd output_1.root output_*layer.root
 
 # wait until merging is finished, and delete tmp rootfiles
 if [ $? -eq 0 ]; then
@@ -33,5 +29,8 @@ else
     echo "Error occurred during merging. Individual files were not deleted. Exiting..."
     exit 1
 fi
+
+cd ../../learn/code
+python3 latent.py
 
 echo "All process finished!"

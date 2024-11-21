@@ -2,6 +2,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+
 class Encoder(nn.Module):
     def __init__(self, input_size, hidden_sizes, output_size=1):
         super().__init__()
@@ -48,3 +49,8 @@ class FullModel(nn.Module):
             (mom.unsqueeze(1), tof.unsqueeze(1), latent), dim=1
         )  # mom, tof, latentを結合
         return self.classifier(x)
+
+    def forward_with_latent(self, mom, tof, energy_layers):
+        latent = self.encoder(energy_layers)
+        x = torch.cat((mom.unsqueeze(1), tof.unsqueeze(1), latent), dim=1)
+        return latent, self.classifier(x)

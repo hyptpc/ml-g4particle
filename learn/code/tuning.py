@@ -1,7 +1,13 @@
 # ***************************************
 #
-# Hyperparameter optimization with Optuna
+# hidden layer optimization with Optuna
 # Using small dataset for tuning
+#
+#   other hyperparameters:
+#   loss_function: CrossEntropyLoss
+#   optimizer: SGD
+#   learning_rate: 0.01
+#   batch_size: 256
 #
 # 2024/11/14 K.Amemiya
 # ***************************************
@@ -62,7 +68,7 @@ def objective(trial):
     # モデルの初期化
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = FullModel(
-        input_size=layer_num,
+        layer_num=layer_num,
         encoder_hidden_sizes=encoder_hidden_sizes,
         classifier_hidden_sizes=classifier_hidden_sizes,
     ).to(device)

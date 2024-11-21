@@ -16,7 +16,7 @@ from include.models import FullModel
 from include.utils import load_params
 
 
-def fill_rootfile(
+def save_to_files(
     model,
     test_loader,
     checkpoint_path,
@@ -33,6 +33,7 @@ def fill_rootfile(
     write_mom = []
     write_tof = []
     write_ene = [[] for _ in range(layer_num)]
+    write_latent = []  # Encoder output
     write_particle = []
     write_particle_ML = []
     num_test = 0
@@ -48,7 +49,9 @@ def fill_rootfile(
             energy_layers = batch["input"]["energy_layers"].to(device)
             labels = batch["target"].to(device)
             particle_ = labels.cpu().numpy()
-            outputs = model(mom, tof, energy_layers)
+            # outputs = model(mom, tof, energy_layers)
+            latent, outputs = model.forward_with_latent(mom, tof, energy_layers)
+            latent = latent.cpu().numpy()
             particle_ML = torch.argmax(outputs, dim=1).cpu().numpy()
             correct_predictions += np.sum(particle_ == particle_ML)
 
@@ -58,6 +61,7 @@ def fill_rootfile(
                 for layer in range(layer_num):
                     ene = energy_layers[j, layer]
                     write_ene[layer].append(ene.cpu().numpy())
+                write_latent.append(latent[j])  # Save latent representation
                 particle = particle_[j]
                 write_particle.append(particle)
                 write_particle_ML.append(particle_ML[j])
@@ -81,17 +85,12 @@ def fill_rootfile(
             ),
         ]
     )
-
     # 既存のCSVファイルが存在する場合は読み込む
     if os.path.exists(csv_path):
         existing_df = pd.read_csv(csv_path)
         df = pd.concat([existing_df, df])
-
-    # layersを昇順にソート
-    df = df.sort_values(by="layers").reset_index(drop=True)
-
-    # CSVファイルに保存
-    df.to_csv(csv_path, index=False)
+    df = df.sort_values(by="layers").reset_index(drop=True)  # layersを昇順にソート
+    df.to_csv(csv_path, index=False)  # CSVファイルに保存
     print(f"Results saved to {csv_path}")
 
     # Save the results to a ROOT file
@@ -100,32 +99,27 @@ def fill_rootfile(
         "pid_ML": np.int32,
         "tof": np.float32,
         "mom": np.float32,
+        "latent": np.float32,  # Add latent branch
     }
     for layer in range(layer_num):
         branches[f"ene_layer{layer}"] = np.float32
-
     file = uproot3.recreate(output_root_path)
     file[tree_name] = uproot3.newtree(branches)
-
     extend_data = {
         "pid": write_particle,
         "pid_ML": write_particle_ML,
         "tof": write_tof,
         "mom": write_mom,
+        "latent": write_latent,  # Save latent data
     }
     for layer in range(layer_num):
         extend_data[f"ene_layer{layer}"] = write_ene[layer]
-
     file[tree_name].extend(extend_data)
+    print(f"Results saved to {output_root_path}")
 
 
 def main():
 
-    if len(sys.argv) < 2:
-        print(
-            "Please provide the layer number as an argument (e.g., 'python3 test_net.py 10')."
-        )
-        sys.exit(1)
     layer_num = int(sys.argv[1])
     tree_name = f"tree_{layer_num}layer"
     test_root_path = "../../geant/rootfiles/input_test.root"
@@ -160,7 +154,7 @@ def main():
         model = torch.nn.DataParallel(model)
 
     # save data to rootfile and csv
-    fill_rootfile(
+    save_to_files(
         model,
         test_loader,
         checkpoint_path,
@@ -170,7 +164,6 @@ def main():
         layer_num,
         device=device,
     )
-    print(f"Results saved to {output_root_path}")
 
 
 if __name__ == "__main__":

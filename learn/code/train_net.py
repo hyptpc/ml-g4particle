@@ -38,6 +38,8 @@ def learning(
     train_accuracy_list = []
     val_accuracy_list = []
     epoch_list = []
+    early_stopping_counter = 0
+    patience = 20  # 検証損失が改善しないエポック数の上限
 
     if os.path.exists(checkpoint_path):
         checkpoint = torch.load(checkpoint_path)
@@ -77,6 +79,7 @@ def learning(
         # 更新されたモデルを保存
         if val_loss < min_loss:
             min_loss = val_loss
+            early_stopping_counter = 0
             torch.save(
                 {
                     "epoch": epoch,
@@ -91,6 +94,12 @@ def learning(
                 },
                 checkpoint_path,
             )
+        else:
+            early_stopping_counter += 1
+            if early_stopping_counter >= patience:
+                print("Early stopping")
+                break
+
     return train_loss_list, val_loss_list, train_accuracy_list, val_accuracy_list
 
 
@@ -98,18 +107,13 @@ def learning(
 
 
 def main():
-    if len(sys.argv) < 2:
-        print(
-            "Please provide the layer number as an argument (e.g., 'python3 train_net.py 10')."
-        )
-        sys.exit(1)
 
     layer_num = int(sys.argv[1])
     tree_name = f"tree_{layer_num}layer"
     checkpoint_path = f"../pth/train_{layer_num}layer.pth"
     fig_path = f"../figures/train_{layer_num}layer.png"
     input_root_path = "../../geant/rootfiles/input_nn.root"
-    n_epoch = 100
+    n_epoch = 150
 
     print("Loading data ...")
     full_dataset = CustomRootDataset(

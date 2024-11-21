@@ -70,7 +70,6 @@ def plot_figures(
     plt.ylabel("accuracy", fontsize=10)
     plt.title("Training and validation accuracy")
     plt.grid()
-    # plt.tight_layout()
 
     plt.subplot(1, 2, 2)
     plt.plot(train_loss_list, c="blue", label="train", linestyle="--")
@@ -80,6 +79,7 @@ def plot_figures(
     plt.ylabel("loss", fontsize=10)
     plt.title("Training and validation loss")
     plt.grid()
+
     plt.savefig(fig_path)
 
 
