@@ -66,10 +66,9 @@ def learning(
             model, val_loader, loss_function, device=device
         )
         print(
-            f"epoch : {epoch}, train_loss : {train_loss:.5f}, val_loss : {val_loss:.5f}"
-        )
-        print(
-            f"train_accuracy : {train_accuracy:.5f}, val_accuracy : {val_accuracy:.5f}"
+            "Epoch [{}/{}] | Train [loss:{:.5f}, acc:{:.5f}] | Val [loss:{:.5f}, acc:{:.5f}]".format(
+                epoch + 1, n_epoch, train_loss, train_accuracy, val_loss, val_accuracy
+            )
         )
         train_loss_list.append(train_loss)
         val_loss_list.append(val_loss)
@@ -115,7 +114,7 @@ def main():
     input_root_path = "../../geant/rootfiles/input_nn.root"
     n_epoch = 150
 
-    print("Loading data ...")
+    # データセットの作成
     full_dataset = CustomRootDataset(
         input_root_path, tree_name, layer_num, sample_fraction=1.0
     )
@@ -153,21 +152,14 @@ def main():
     ).to(device)
     loss_function = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01)
-    # optimizer = optim.Adam(model.parameters(), lr=0.01)
 
-    print("*********************************")
-    print("number of CPU core: ", os.cpu_count())
-    print(f"now using {num_workers} core")
-    print("---------------------------------")
+    # GPUの設定
     if torch.cuda.is_available():
         n_gpu = torch.cuda.device_count()
         print("number of GPU available: ", n_gpu)  # gpuの使用可能数を取得
         print("current gpu: ", torch.cuda.get_device_name(torch.cuda.current_device()))
         if n_gpu > 1:
             model = nn.DataParallel(model)
-    else:
-        print("no gpu available")
-    print("*********************************")
 
     # 学習
     train_loss_list, val_loss_list, train_accuracy_list, val_accuracy_list = learning(

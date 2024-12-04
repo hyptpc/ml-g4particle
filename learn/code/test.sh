@@ -18,8 +18,8 @@ done
 
 # integrate all output rootfiles
 cd ../../geant/rootfiles
-rm -rf output_1.root
-hadd output_1.root output_*layer.root
+rm -rf output.root
+hadd output.root output_*layer.root
 
 # wait until merging is finished, and delete tmp rootfiles
 if [ $? -eq 0 ]; then

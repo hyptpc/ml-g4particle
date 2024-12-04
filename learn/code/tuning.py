@@ -28,7 +28,7 @@ n_epoch = 50
 input_root_path = "../../geant/rootfiles/input_nn.root"
 layer_num = 32  # 簡単のために32layerのテータのみを考慮
 tree_name = "tree_32layer"
-sample_fraction = 0.01  # 効率化のためにテストデータのうち1%のデータのみを使用
+sample_fraction = 0.01
 
 # データセットの読み込み（全データ）
 sampled_dt = CustomRootDataset(
@@ -104,7 +104,7 @@ def save_params(study, output_path):
 """ メイン """
 
 if __name__ == "__main__":
-    study_name = "hidden_layer_tuning"
+    study_name = "hidden_layers"
     storage_name = "sqlite:///optuna.db"
     n_trials = 100  # 総試行回数
 
