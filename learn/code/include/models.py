@@ -3,7 +3,8 @@ from torch import nn
 import torch.nn.functional as F
 
 
-class Encoder(nn.Module):
+class Regressor(nn.Module):
+    """dE/dxからβを推定する回帰モデル"""
     def __init__(self, input_size, hidden_sizes, output_size=1):
         super().__init__()
         self.hidden_layers = nn.ModuleList()
@@ -19,6 +20,7 @@ class Encoder(nn.Module):
 
 
 class Classifier(nn.Module):
+    """β, ToF, momをもとにPIDを行う分類モデル"""
     def __init__(self, input_size, hidden_sizes, output_size=3):
         super().__init__()
         self.hidden_layers = nn.ModuleList()
@@ -34,9 +36,10 @@ class Classifier(nn.Module):
 
 
 class FullModel(nn.Module):
+    """RegressorとClassifierを統合した全体モデル"""
     def __init__(self, layer_num, encoder_hidden_sizes, classifier_hidden_sizes):
         super().__init__()
-        self.encoder = Encoder(
+        self.regressor = Regressor(
             input_size=layer_num, hidden_sizes=encoder_hidden_sizes, output_size=1
         )
         self.classifier = Classifier(
@@ -44,13 +47,8 @@ class FullModel(nn.Module):
         )
 
     def forward(self, mom, tof, energy_layers):
-        latent = self.encoder(energy_layers)  # 多chのde/dxを1次元の情報に変換
+        beta = self.encoder(energy_layers)  # 多chのde/dxをβに変換
         x = torch.cat(
-            (mom.unsqueeze(1), tof.unsqueeze(1), latent), dim=1
-        )  # mom, tof, latentを結合
+            (mom.unsqueeze(1), tof.unsqueeze(1), beta), dim=1
+        )  # mom, tof, βを結合
         return self.classifier(x)
-
-    def forward_with_latent(self, mom, tof, energy_layers):
-        latent = self.encoder(energy_layers)
-        x = torch.cat((mom.unsqueeze(1), tof.unsqueeze(1), latent), dim=1)
-        return latent, self.classifier(x)

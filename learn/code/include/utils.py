@@ -1,6 +1,7 @@
 import torch
 import matplotlib.pyplot as plt
 import json
+import numpy as np
 
 """ training function """
 
@@ -89,3 +90,17 @@ def plot_figures(
 def load_params(path):
     with open(path, "r") as f:
         return json.load(f)
+
+
+"""βの計算"""
+
+def calculate_beta(mom, pid):
+    if pid == 0:  # proton
+        mass = 0.938272  # GeV
+    elif pid == 1:  # pion
+        mass = 0.139570  # GeV
+    elif pid == 2:  # kaon
+        mass = 0.493677  # GeV
+    beta = mom / np.sqrt(mass**2 + mom**2)
+    return beta
+

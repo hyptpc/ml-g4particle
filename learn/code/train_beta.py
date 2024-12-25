@@ -15,8 +15,8 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 import os
 import sys
-from include.dataset import ClassificationDataset
-from include.models import FullModel
+from include.dataset import RegressionDataset
+from include.models import Regressor
 from include.utils import train_model, val_model, plot_figures, load_params
 
 
@@ -115,7 +115,7 @@ def main():
     n_epoch = 150
 
     # データセットの作成
-    full_dataset = CustomRootDataset(
+    full_dataset = RegressionDataset(
         input_root_path, tree_name, layer_num, sample_fraction=1.0
     )
     dataset_size = len(full_dataset)
@@ -145,7 +145,7 @@ def main():
         for i in range(params["classifier_hidden_layers"])
     ]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = FullModel(
+    model = Regressor(
         layer_num=layer_num,
         encoder_hidden_sizes=encoder_hidden_sizes,
         classifier_hidden_sizes=classifier_hidden_sizes,
