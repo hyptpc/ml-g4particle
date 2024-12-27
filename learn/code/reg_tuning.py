@@ -20,8 +20,8 @@ from torch.utils.data import DataLoader
 import optuna
 import os
 import json
-from include.dataset import CustomRootDataset
-from include.models import FullModel
+from include.dataset import RegressorDataset
+from include.models import Regressor
 from include.utils import train_model, val_model
 
 n_epoch = 50
