@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 import optuna
 import os
 import json
-from include.dataset import RegressorDataset
+from include.dataset import RegressionDataset
 from include.models import Regressor
 
 n_epoch = 50
@@ -24,7 +24,7 @@ tree_name = "tree_32layer"
 sample_fraction = 0.01
 
 # データセットの読み込み（全データ）
-sampled_dt = RegressorDataset(
+sampled_dt = RegressionDataset(
     input_root_path, tree_name, layer_num=layer_num, sample_fraction=sample_fraction
 )
 
@@ -122,7 +122,7 @@ def val_model(model, val_loader, loss_function, device="cpu"):
 """ メイン """
 
 if __name__ == "__main__":
-    study_name = "reg_hidden_layers"
+    study_name = "regressor_hidden_layers"
     storage_name = "sqlite:///optuna.db"
     n_trials = 100  # 総試行回数
 
