@@ -56,8 +56,8 @@ def objective(trial):
     # モデルの初期化
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = Regressor(
-        layer_num=layer_num,
-        regressor_hidden_sizes=regressor_hidden_sizes
+        input_size=layer_num,
+        hidden_sizes=regressor_hidden_sizes
     ).to(device)
     loss_function = nn.MSELoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01)
