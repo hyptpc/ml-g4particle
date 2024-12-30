@@ -38,7 +38,6 @@ class RegressionDataset(Dataset):
         self.beta = np.array([calculate_beta(m, p) for m, p in zip(self.mom, self.particles)])
 
         # Convert to PyTorch tensors
-        self.mom = torch.tensor(self.mom, dtype=torch.float32)
         self.energy_layers = torch.tensor(self.energy_layers, dtype=torch.float32)
         self.beta = torch.tensor(self.beta, dtype=torch.float32)
 

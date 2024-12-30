@@ -37,10 +37,10 @@ class Classifier(nn.Module):
 
 class FullModel(nn.Module):
     """RegressorとClassifierを統合した全体モデル"""
-    def __init__(self, layer_num, encoder_hidden_sizes, classifier_hidden_sizes):
+    def __init__(self, layer_num, regressor_hidden_sizes, classifier_hidden_sizes):
         super().__init__()
         self.regressor = Regressor(
-            input_size=layer_num, hidden_sizes=encoder_hidden_sizes, output_size=1
+            input_size=layer_num, hidden_sizes=regressor_hidden_sizes, output_size=1
         )
         self.classifier = Classifier(
             input_size=3, hidden_sizes=classifier_hidden_sizes, output_size=3

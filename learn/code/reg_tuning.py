@@ -1,15 +1,9 @@
 # ***************************************
 #
-# hidden layer optimization with Optuna
+# optimize size and number of hidden layer in regressor
 # Using small dataset for tuning
 #
-#   other hyperparameters:
-#   loss_function: CrossEntropyLoss
-#   optimizer: SGD
-#   learning_rate: 0.01
-#   batch_size: 256
-#
-# 2024/11/14 K.Amemiya
+# 2024/12/30 K.Amemiya
 # ***************************************
 
 import numpy as np
@@ -22,16 +16,15 @@ import os
 import json
 from include.dataset import RegressorDataset
 from include.models import Regressor
-from include.utils import train_model, val_model
 
 n_epoch = 50
-input_root_path = "../../geant/rootfiles/input_nn.root"
+input_root_path = "../../geant/data/input_nn.root"
 layer_num = 32  # 簡単のために32layerのテータのみを考慮
 tree_name = "tree_32layer"
 sample_fraction = 0.01
 
 # データセットの読み込み（全データ）
-sampled_dt = CustomRootDataset(
+sampled_dt = RegressorDataset(
     input_root_path, tree_name, layer_num=layer_num, sample_fraction=sample_fraction
 )
 
@@ -41,16 +34,11 @@ sampled_dt = CustomRootDataset(
 
 def objective(trial):
     # EncoderとClassifierの隠れ層数とサイズを探索
-    encoder_hidden_layers = trial.suggest_int("encoder_hidden_layers", 2, 6)
-    classifier_hidden_layers = trial.suggest_int("classifier_hidden_layers", 2, 6)
+    regressor_hidden_layers = trial.suggest_int("regressor_hidden_layers", 2, 6)
 
-    encoder_hidden_sizes = [
-        trial.suggest_categorical(f"encoder_hidden_size_{i}", [128, 256, 512, 1024])
-        for i in range(encoder_hidden_layers)
-    ]
-    classifier_hidden_sizes = [
-        trial.suggest_categorical(f"classifier_hidden_size_{i}", [128, 256, 512, 1024])
-        for i in range(classifier_hidden_layers)
+    regressor_hidden_sizes = [
+        trial.suggest_categorical(f"regressor_hidden_size_{i}", [128, 256, 512, 1024])
+        for i in range(regressor_hidden_layers)
     ]
 
     sampled_dt_size = len(sampled_dt)
@@ -67,20 +55,19 @@ def objective(trial):
 
     # モデルの初期化
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = FullModel(
+    model = Regressor(
         layer_num=layer_num,
-        encoder_hidden_sizes=encoder_hidden_sizes,
-        classifier_hidden_sizes=classifier_hidden_sizes,
+        regressor_hidden_sizes=regressor_hidden_sizes
     ).to(device)
-    loss_function = nn.CrossEntropyLoss()
+    loss_function = nn.MSELoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01)
 
     # 学習と評価
     for epoch in range(1, n_epoch + 1):
-        train_loss, train_accuracy = train_model(
+        train_loss = train_model(
             model, train_loader, loss_function, optimizer, device=device
         )
-        val_loss, val_accuracy = val_model(
+        val_loss = val_model(
             model, val_loader, loss_function, device=device
         )
 
@@ -101,10 +88,41 @@ def save_params(study, output_path):
         json.dump(best_params, f)
 
 
+""" モデルの評価 """
+def train_model(model, train_loader, loss_function, optimizer, device="cpu"):
+    model.train()
+    total_loss = 0
+    for batch in train_loader:
+        inputs = batch["input"].to(device)  # dE/dx
+        target = batch["target"].to(device)  # β
+        optimizer.zero_grad()
+        outputs = model(inputs)
+        loss = loss_function(outputs.squeeze(), target)
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item()
+
+    return total_loss / len(train_loader)
+
+def val_model(model, val_loader, loss_function, device="cpu"):
+    model.eval()
+    total_loss = 0
+    with torch.no_grad():
+        for batch in val_loader:
+            inputs = batch["input"].to(device) # dE/dx
+            target = batch["target"].to(device) # β
+            outputs = model(inputs)
+            loss = loss_function(outputs.squeeze(), target)
+            total_loss += loss.item()
+
+    return total_loss / len(val_loader)
+
+
+
 """ メイン """
 
 if __name__ == "__main__":
-    study_name = "hidden_layers"
+    study_name = "reg_hidden_layers"
     storage_name = "sqlite:///optuna.db"
     n_trials = 100  # 総試行回数
 
@@ -126,16 +144,13 @@ if __name__ == "__main__":
 
     def print_progress(study, trial):
         print(f"Trial {trial.number} completed with val_loss: {trial.value}")
-        print(
-            f"Best trial so far: {study.best_trial.number} with val_loss: {study.best_trial.value}"
-        )
+        print(f"Best trial so far: {study.best_trial.number} with val_loss: {study.best_trial.value}")
 
     # 残りの試行数のみ実行
     if remaining_trials > 0:
         study.optimize(objective, n_trials=remaining_trials, callbacks=[print_progress])
 
-    save_params(study, "tuned_params.json")  # 最適なパラメータを保存
-    print("parameters saved to json")
+    save_params(study, "regressor_params.json")  # 最適なパラメータを保存
 
     best_trial = study.best_trial
     print(f"Best trial number: {best_trial.number}")

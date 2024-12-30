@@ -1,1 +1,0 @@
-{"encoder_hidden_layers": 4, "classifier_hidden_layers": 3, "encoder_hidden_size_0": 256, "encoder_hidden_size_1": 512, "encoder_hidden_size_2": 512, "encoder_hidden_size_3": 256, "classifier_hidden_size_0": 1024, "classifier_hidden_size_1": 512, "classifier_hidden_size_2": 1024}
