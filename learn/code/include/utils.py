@@ -3,6 +3,36 @@ import matplotlib.pyplot as plt
 import json
 import numpy as np
 
+def reg_train_model(model, train_loader, loss_function, optimizer, device="cpu"):
+    model.train()
+    total_loss = 0
+    for batch in train_loader:
+        inputs = batch["input"].to(device)  # dE/dx
+        target = batch["target"].to(device)  # β
+        optimizer.zero_grad()
+        outputs = model(inputs)
+        loss = loss_function(outputs.squeeze(), target)
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item()
+
+    return total_loss / len(train_loader)
+
+def reg_val_model(model, val_loader, loss_function, device="cpu"):
+    model.eval()
+    total_loss = 0
+    with torch.no_grad():
+        for batch in val_loader:
+            inputs = batch["input"].to(device) # dE/dx
+            target = batch["target"].to(device) # β
+            outputs = model(inputs)
+            loss = loss_function(outputs.squeeze(), target)
+            total_loss += loss.item()
+
+    return total_loss / len(val_loader)
+
+
+
 """ training function """
 
 

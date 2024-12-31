@@ -47,7 +47,7 @@ class FullModel(nn.Module):
         )
 
     def forward(self, mom, tof, energy_layers):
-        beta = self.encoder(energy_layers)  # 多chのde/dxをβに変換
+        beta = self.regressor(energy_layers)  # 多chのde/dxをβに変換
         x = torch.cat(
             (mom.unsqueeze(1), tof.unsqueeze(1), beta), dim=1
         )  # mom, tof, βを結合

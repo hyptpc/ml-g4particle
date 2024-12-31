@@ -1,6 +1,6 @@
 # ==========================================
-#   input: particle, mom, tof, ene
-#   output: particle_ML
+#   input: ene (multiple layers)
+#   output: beta
 #
 #  created by K.Amemiya (2024/11/14)
 # ==========================================
@@ -15,9 +15,10 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 import os
 import sys
+import matplotlib.pyplot as plt
 from include.dataset import RegressionDataset
 from include.models import Regressor
-from include.utils import train_model, val_model, plot_figures, load_params
+from include.utils import reg_train_model, reg_val_model, load_params
 
 
 """ leaning function """
@@ -35,8 +36,6 @@ def learning(
 ):
     train_loss_list = []
     val_loss_list = []
-    train_accuracy_list = []
-    val_accuracy_list = []
     epoch_list = []
     early_stopping_counter = 0
     patience = 20  # 検証損失が改善しないエポック数の上限
@@ -48,8 +47,6 @@ def learning(
         start_epoch = checkpoint["epoch"] + 1  # 学習を前回のエポックから再開
         train_loss_list = checkpoint["train_loss"]
         val_loss_list = checkpoint["val_loss"]
-        train_accuracy_list = checkpoint["train_accuracy"]
-        val_accuracy_list = checkpoint["val_accuracy"]
         epoch_list = checkpoint["epoch_list"]
         min_loss = checkpoint["min_loss"]
         print(f"Previous checkpoint loaded. Resuming training from epoch {start_epoch}")
@@ -59,21 +56,15 @@ def learning(
 
     # epoch loop
     for epoch in range(start_epoch, n_epoch + 1, 1):
-        train_loss, train_accuracy = train_model(
+        train_loss = reg_train_model(
             model, train_loader, loss_function, optimizer, device=device
         )
-        val_loss, val_accuracy = val_model(
+        val_loss  = reg_val_model(
             model, val_loader, loss_function, device=device
         )
-        print(
-            "Epoch [{}/{}] | Train [loss:{:.5f}, acc:{:.5f}] | Val [loss:{:.5f}, acc:{:.5f}]".format(
-                epoch + 1, n_epoch, train_loss, train_accuracy, val_loss, val_accuracy
-            )
-        )
+        print(f"Epoch [{epoch}/{n_epoch}] | Train loss:{train_loss:.5f} | Val loss:{val_loss:.5f}")
         train_loss_list.append(train_loss)
         val_loss_list.append(val_loss)
-        train_accuracy_list.append(train_accuracy)
-        val_accuracy_list.append(val_accuracy)
         epoch_list.append(epoch)
         # 更新されたモデルを保存
         if val_loss < min_loss:
@@ -86,8 +77,6 @@ def learning(
                     "optimizer": optimizer.state_dict(),
                     "train_loss": train_loss_list,
                     "val_loss": val_loss_list,
-                    "train_accuracy": train_accuracy_list,
-                    "val_accuracy": val_accuracy_list,
                     "epoch_list": epoch_list,
                     "min_loss": min_loss,
                 },
@@ -99,7 +88,24 @@ def learning(
                 print("Early stopping")
                 break
 
-    return train_loss_list, val_loss_list, train_accuracy_list, val_accuracy_list
+    return train_loss_list, val_loss_list
+
+""" loss function のプロット """
+
+def plot_loss(
+    train_loss_list, val_loss_list, fig_path
+):
+
+    plt.figure()
+    plt.plot(train_loss_list, c="blue", label="train", linestyle="--")
+    plt.plot(val_loss_list, c="red", label="val", linestyle="-")
+    plt.legend()
+    plt.xlabel("epoch", fontsize=10)
+    plt.ylabel("loss", fontsize=10)
+    plt.title("Training and validation loss")
+    plt.grid()
+    plt.savefig(fig_path)
+
 
 
 """ メイン関数 """
@@ -110,9 +116,9 @@ def main():
     layer_num = int(sys.argv[1])
     tree_name = f"tree_{layer_num}layer"
     checkpoint_path = f"../pth/train_{layer_num}layer.pth"
-    fig_path = f"../figures/train_{layer_num}layer.png"
-    input_root_path = "../../geant/rootfiles/input_nn.root"
-    n_epoch = 150
+    loss_fig_path = f"../figures/reg_train_{layer_num}layer.png"
+    input_root_path = "../../data/rootfiles/input_nn.root"
+    n_epoch = 100
 
     # データセットの作成
     full_dataset = RegressionDataset(
@@ -135,22 +141,17 @@ def main():
     )
 
     # モデルの初期化
-    params = load_params("tuned_params.json")
-    encoder_hidden_sizes = [
-        params[f"encoder_hidden_size_{i}"]
-        for i in range(params["encoder_hidden_layers"])
-    ]
-    classifier_hidden_sizes = [
-        params[f"classifier_hidden_size_{i}"]
-        for i in range(params["classifier_hidden_layers"])
+    params = load_params("regressor_params.json")
+    regressor_hidden_sizes = [
+        params[f"regressor_hidden_size_{i}"]
+        for i in range(params["regressor_hidden_layers"])
     ]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = Regressor(
-        layer_num=layer_num,
-        encoder_hidden_sizes=encoder_hidden_sizes,
-        classifier_hidden_sizes=classifier_hidden_sizes,
+        input_size=layer_num,
+        hidden_sizes=regressor_hidden_sizes
     ).to(device)
-    loss_function = nn.CrossEntropyLoss()
+    loss_function = nn.MSELoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01)
 
     # GPUの設定
@@ -162,7 +163,7 @@ def main():
             model = nn.DataParallel(model)
 
     # 学習
-    train_loss_list, val_loss_list, train_accuracy_list, val_accuracy_list = learning(
+    train_loss_list, val_loss_list = learning(
         checkpoint_path,
         model,
         train_loader,
@@ -173,10 +174,9 @@ def main():
         device=device,
     )
 
-    plot_figures(
-        train_loss_list, val_loss_list, train_accuracy_list, val_accuracy_list, fig_path
+    plot_loss(
+        train_loss_list, val_loss_list, loss_fig_path
     )
-
 
 if __name__ == "__main__":
     main()

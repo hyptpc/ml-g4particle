@@ -16,6 +16,7 @@ import os
 import json
 from include.dataset import RegressionDataset
 from include.models import Regressor
+from include.utils import reg_train_model, reg_val_model
 
 n_epoch = 50
 input_root_path = "../../geant/data/input_nn.root"
@@ -64,10 +65,10 @@ def objective(trial):
 
     # 学習と評価
     for epoch in range(1, n_epoch + 1):
-        train_loss = train_model(
+        train_loss = reg_train_model(
             model, train_loader, loss_function, optimizer, device=device
         )
-        val_loss = val_model(
+        val_loss = reg_val_model(
             model, val_loader, loss_function, device=device
         )
 
@@ -86,36 +87,6 @@ def save_params(study, output_path):
     best_params = study.best_trial.params
     with open(output_path, "w") as f:
         json.dump(best_params, f)
-
-
-""" モデルの評価 """
-def train_model(model, train_loader, loss_function, optimizer, device="cpu"):
-    model.train()
-    total_loss = 0
-    for batch in train_loader:
-        inputs = batch["input"].to(device)  # dE/dx
-        target = batch["target"].to(device)  # β
-        optimizer.zero_grad()
-        outputs = model(inputs)
-        loss = loss_function(outputs.squeeze(), target)
-        loss.backward()
-        optimizer.step()
-        total_loss += loss.item()
-
-    return total_loss / len(train_loader)
-
-def val_model(model, val_loader, loss_function, device="cpu"):
-    model.eval()
-    total_loss = 0
-    with torch.no_grad():
-        for batch in val_loader:
-            inputs = batch["input"].to(device) # dE/dx
-            target = batch["target"].to(device) # β
-            outputs = model(inputs)
-            loss = loss_function(outputs.squeeze(), target)
-            total_loss += loss.item()
-
-    return total_loss / len(val_loader)
 
 
 
