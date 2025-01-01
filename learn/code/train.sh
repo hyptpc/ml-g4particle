@@ -13,3 +13,7 @@
 for layer in {10..32}; do
     bsub -q h python3 train_reg.py $layer
 done
+
+# for layer in {10..32}; do
+#     bsub -q h python3 test_reg.py $layer
+# done

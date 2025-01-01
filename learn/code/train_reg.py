@@ -2,7 +2,7 @@
 #   input: ene (multiple layers)
 #   output: beta
 #
-#  created by K.Amemiya (2024/11/14)
+#  created by K.Amemiya (2024/12/31)
 # ==========================================
 
 import torch.multiprocessing
@@ -92,9 +92,7 @@ def learning(
 
 """ loss function のプロット """
 
-def plot_loss(
-    train_loss_list, val_loss_list, fig_path
-):
+def plot_loss(train_loss_list, val_loss_list, fig_path):
 
     plt.figure()
     plt.plot(train_loss_list, c="blue", label="train", linestyle="--")
@@ -107,7 +105,6 @@ def plot_loss(
     plt.savefig(fig_path)
 
 
-
 """ メイン関数 """
 
 
@@ -115,9 +112,9 @@ def main():
 
     layer_num = int(sys.argv[1])
     tree_name = f"tree_{layer_num}layer"
-    checkpoint_path = f"../pth/train_{layer_num}layer.pth"
+    checkpoint_path = f"../pth/reg_{layer_num}layer.pth"
     loss_fig_path = f"../figures/reg_train_{layer_num}layer.png"
-    input_root_path = "../../data/rootfiles/input_nn.root"
+    input_root_path = "../../geant/data/input_nn.root"
     n_epoch = 100
 
     # データセットの作成

@@ -37,6 +37,14 @@ class RegressionDataset(Dataset):
         self.energy_layers = self.energy_layers[indices]
         self.beta = np.array([calculate_beta(m, p) for m, p in zip(self.mom, self.particles)])
 
+        # 標準化
+        self.energy_layers_mean = np.mean(self.energy_layers, axis=0)
+        self.energy_layers_std = np.std(self.energy_layers, axis=0)
+        self.energy_layers = (self.energy_layers - self.energy_layers_mean) / self.energy_layers_std
+        # self.beta_mean = np.mean(self.beta)
+        # self.beta_std = np.std(self.beta)
+        # self.beta = (self.beta - self.beta_mean) / self.beta_std
+
         # Convert to PyTorch tensors
         self.energy_layers = torch.tensor(self.energy_layers, dtype=torch.float32)
         self.beta = torch.tensor(self.beta, dtype=torch.float32)
@@ -83,7 +91,18 @@ class ClassificationDataset(Dataset):
         self.mom = self.mom[indices]
         self.tof = self.tof[indices]
         self.energy_layers = self.energy_layers[indices]
-
+        
+        # 標準化
+        # self.mom_mean = np.mean(self.mom)
+        # self.mom_std = np.std(self.mom)
+        # self.mom = (self.mom - self.mom_mean) / self.mom_std
+        # self.tof_mean = np.mean(self.tof)
+        # self.tof_std = np.std(self.tof)
+        # self.tof = (self.tof - self.tof_mean) / self.tof_std
+        self.energy_layers_mean = np.mean(self.energy_layers, axis=0)
+        self.energy_layers_std = np.std(self.energy_layers, axis=0)
+        self.energy_layers = (self.energy_layers - self.energy_layers_mean) / self.energy_layers_std
+        
         # Convert to PyTorch tensors
         self.particles = torch.tensor(self.particles, dtype=torch.long)
         self.mom = torch.tensor(self.mom, dtype=torch.float32)
