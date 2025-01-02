@@ -24,7 +24,8 @@ from include.utils import train_model, val_model, plot_figures, load_params
 
 
 def learning(
-    checkpoint_path,
+    reg_pth,
+    class_pth,
     model,
     train_loader,
     val_loader,
@@ -41,8 +42,8 @@ def learning(
     early_stopping_counter = 0
     patience = 20  # 検証損失が改善しないエポック数の上限
 
-    if os.path.exists(checkpoint_path):
-        checkpoint = torch.load(checkpoint_path)
+    if os.path.exists(class_pth):
+        checkpoint = torch.load(class_pth)
         model.load_state_dict(checkpoint["model"])
         optimizer.load_state_dict(checkpoint["optimizer"])
         start_epoch = checkpoint["epoch"] + 1  # 学習を前回のエポックから再開
@@ -91,7 +92,7 @@ def learning(
                     "epoch_list": epoch_list,
                     "min_loss": min_loss,
                 },
-                checkpoint_path,
+                class_pth,
             )
         else:
             early_stopping_counter += 1
@@ -109,13 +110,14 @@ def main():
 
     layer_num = int(sys.argv[1])
     tree_name = f"tree_{layer_num}layer"
-    checkpoint_path = f"../pth/train_{layer_num}layer.pth"
-    fig_path = f"../figures/train_{layer_num}layer.png"
-    input_root_path = "../../geant/rootfiles/input_nn.root"
+    reg_pth = f"../pth/reg_train_{layer_num}layer.pth"
+    class_pth = f"../pth/class_train_{layer_num}layer.pth"
+    fig_path = f"../figures/class_train_{layer_num}layer.png"
+    input_root_path = "../../geant/data/input_nn.root"
     n_epoch = 150
 
     # データセットの作成
-    full_dataset = CustomRootDataset(
+    full_dataset = ClassificationDataset(
         input_root_path, tree_name, layer_num, sample_fraction=1.0
     )
     dataset_size = len(full_dataset)
@@ -163,7 +165,8 @@ def main():
 
     # 学習
     train_loss_list, val_loss_list, train_accuracy_list, val_accuracy_list = learning(
-        checkpoint_path,
+        reg_pth,
+        class_pth,
         model,
         train_loader,
         val_loader,
