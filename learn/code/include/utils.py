@@ -36,7 +36,7 @@ def reg_val_model(model, val_loader, loss_function, device="cpu"):
 """ training function """
 
 
-def train_model(model, train_loader, loss_function, optimizer, device="cpu"):
+def class_train_model(model, train_loader, loss_function, optimizer, device="cpu"):
     train_loss = 0.0
     num_train = 0
     train_accuracy = 0.0
@@ -63,7 +63,7 @@ def train_model(model, train_loader, loss_function, optimizer, device="cpu"):
 """ val function """
 
 
-def val_model(model, val_loader, loss_function, device="cpu"):
+def class_val_model(model, val_loader, loss_function, device="cpu"):
     val_loss = 0.0
     val_accuracy = 0.0
     num_val = 0

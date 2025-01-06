@@ -11,7 +11,7 @@ import uproot3
 import numpy as np
 import pandas as pd
 from torch.utils.data import DataLoader
-from include.dataset import CustomRootDataset
+from include.dataset import ClassificationDataset
 from include.models import FullModel
 from include.utils import load_params
 
@@ -33,7 +33,6 @@ def save_to_files(
     write_mom = []
     write_tof = []
     write_ene = [[] for _ in range(layer_num)]
-    write_latent = []  # Encoder output
     write_particle = []
     write_particle_ML = []
     num_test = 0
@@ -49,9 +48,7 @@ def save_to_files(
             energy_layers = batch["input"]["energy_layers"].to(device)
             labels = batch["target"].to(device)
             particle_ = labels.cpu().numpy()
-            # outputs = model(mom, tof, energy_layers)
-            latent, outputs = model.forward_with_latent(mom, tof, energy_layers)
-            latent = latent.cpu().numpy()
+            outputs = model(mom, tof, energy_layers)
             particle_ML = torch.argmax(outputs, dim=1).cpu().numpy()
             correct_predictions += np.sum(particle_ == particle_ML)
 
@@ -61,7 +58,6 @@ def save_to_files(
                 for layer in range(layer_num):
                     ene = energy_layers[j, layer]
                     write_ene[layer].append(ene.cpu().numpy())
-                write_latent.append(latent[j])  # Save latent representation
                 particle = particle_[j]
                 write_particle.append(particle)
                 write_particle_ML.append(particle_ML[j])
@@ -98,8 +94,7 @@ def save_to_files(
         "pid": np.int32,
         "pid_ML": np.int32,
         "tof": np.float32,
-        "mom": np.float32,
-        "latent": np.float32,  # Add latent branch
+        "mom": np.float32
     }
     for layer in range(layer_num):
         branches[f"ene_layer{layer}"] = np.float32
@@ -109,8 +104,7 @@ def save_to_files(
         "pid": write_particle,
         "pid_ML": write_particle_ML,
         "tof": write_tof,
-        "mom": write_mom,
-        "latent": write_latent,  # Save latent data
+        "mom": write_mom
     }
     for layer in range(layer_num):
         extend_data[f"ene_layer{layer}"] = write_ene[layer]
@@ -122,23 +116,23 @@ def main():
 
     layer_num = int(sys.argv[1])
     tree_name = f"tree_{layer_num}layer"
-    test_root_path = "../../geant/rootfiles/input_test.root"
-    output_root_path = f"../../geant/rootfiles/output_{layer_num}layer.root"
-    checkpoint_path = f"../pth/train_{layer_num}layer.pth"
+    test_root_path = "../../geant/data/input_test.root"
+    output_root_path = f"../../geant/data/output_{layer_num}layer.root"
+    checkpoint_path = f"../pth/class/class_{layer_num}layer.pth"
     csv_path = "../../likelihood/csv/accuracy.csv"
     sample_fraction = 1  # Use all data
 
     print("Loading data ...")
-    test_dataset = CustomRootDataset(
+    test_dataset = ClassificationDataset(
         test_root_path, tree_name, layer_num, sample_fraction
     )
     test_loader = DataLoader(test_dataset, batch_size=256, shuffle=False, num_workers=8)
 
     # モデルの初期化
-    params = load_params("tuned_params.json")
-    encoder_hidden_sizes = [
-        params[f"encoder_hidden_size_{i}"]
-        for i in range(params["encoder_hidden_layers"])
+    params = load_params("params.json")
+    regressor_hidden_sizes = [
+        params[f"regressor_hidden_size_{i}"]
+        for i in range(params["regressor_hidden_layers"])
     ]
     classifier_hidden_sizes = [
         params[f"classifier_hidden_size_{i}"]
@@ -147,7 +141,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = FullModel(
         layer_num=layer_num,
-        encoder_hidden_sizes=encoder_hidden_sizes,
+        regressor_hidden_sizes=regressor_hidden_sizes,
         classifier_hidden_sizes=classifier_hidden_sizes,
     ).to(device)
     if torch.cuda.is_available() and torch.cuda.device_count() > 1:

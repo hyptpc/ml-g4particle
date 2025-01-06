@@ -1,6 +1,6 @@
 # ***************************************
 #
-# optimize size and number of hidden layer in regressor
+# optimize size and number of hidden layer in classifier
 # Using small dataset for tuning
 #
 # 2024/12/30 K.Amemiya
@@ -14,9 +14,10 @@ from torch.utils.data import DataLoader
 import optuna
 import os
 import json
-from include.dataset import RegressionDataset
-from include.models import Regressor
-from include.utils import reg_train_model, reg_val_model
+import sys
+from include.dataset import ClassificationDataset
+from include.models import FullModel
+from include.utils import class_train_model, class_val_model, load_params
 
 n_epoch = 50
 input_root_path = "../../geant/data/input_nn.root"
@@ -25,7 +26,7 @@ tree_name = "tree_32layer"
 sample_fraction = 0.01
 
 # データセットの読み込み（全データ）
-sampled_dt = RegressionDataset(
+sampled_dt = ClassificationDataset(
     input_root_path, tree_name, layer_num=layer_num, sample_fraction=sample_fraction
 )
 
@@ -34,12 +35,12 @@ sampled_dt = RegressionDataset(
 
 
 def objective(trial):
-    # EncoderとClassifierの隠れ層数とサイズを探索
-    regressor_hidden_layers = trial.suggest_int("regressor_hidden_layers", 2, 6)
+    # Classifierの隠れ層数とサイズを探索
+    classifier_hidden_layers = trial.suggest_int("classifier_hidden_layers", 2, 6)
 
-    regressor_hidden_sizes = [
-        trial.suggest_categorical(f"regressor_hidden_size_{i}", [128, 256, 512, 1024])
-        for i in range(regressor_hidden_layers)
+    classifier_hidden_sizes = [
+        trial.suggest_categorical(f"classifier_hidden_size_{i}", [128, 256, 512, 1024])
+        for i in range(classifier_hidden_layers)
     ]
 
     sampled_dt_size = len(sampled_dt)
@@ -55,20 +56,26 @@ def objective(trial):
     val_loader = DataLoader(val_dataset, batch_size=256, shuffle=True, num_workers=8)
 
     # モデルの初期化
+    params = load_params("params.json")
+    regressor_hidden_sizes = [
+        params[f"regressor_hidden_size_{i}"]
+        for i in range(params["regressor_hidden_layers"])
+    ]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = Regressor(
-        input_size=layer_num,
-        hidden_sizes=regressor_hidden_sizes
+    model = FullModel(
+        layer_num=layer_num,
+        regressor_hidden_sizes=regressor_hidden_sizes,
+        classifier_hidden_sizes=classifier_hidden_sizes
     ).to(device)
-    loss_function = nn.MSELoss()
+    loss_function = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01)
 
     # 学習と評価
     for epoch in range(1, n_epoch + 1):
-        train_loss = reg_train_model(
+        train_loss, train_acc = class_train_model(
             model, train_loader, loss_function, optimizer, device=device
         )
-        val_loss = reg_val_model(
+        val_loss, val_acc = class_val_model(
             model, val_loader, loss_function, device=device
         )
 
@@ -83,35 +90,52 @@ def objective(trial):
 """ 最適パラメータの保存 """
 
 
-def save_params(study, output_path):
-    best_params = study.best_trial.params
+def save_added_params(study, output_path):
+    # 既存のパラメータを読み込む
+    if os.path.exists(output_path):
+        with open(output_path, "r") as f:
+            params = json.load(f)
+    else:
+        print(f"Warning: {output_path} not found")
+        sys.exit(1)
+
+    # 新しいパラメータを追加
+    params.update(study.best_trial.params)
+
+    # ファイルに保存
     with open(output_path, "w") as f:
-        json.dump(best_params, f)
+        json.dump(params, f, indent=4)
+
 
 
 
 """ メイン """
 
 if __name__ == "__main__":
-    study_name = "regressor_hidden_layers"
+    study_name = "classifier_hidden_layers"
     storage_name = "sqlite:///optuna.db"
-    n_trials = 100  # 総試行回数
+    n_trials = 200  # 総試行回数
 
     if os.path.exists("optuna.db"):
-        study = optuna.load_study(study_name=study_name, storage=storage_name)
-        # 残りの試行数を計算
-        completed_trials = len(
-            [t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE]
-        )
-        remaining_trials = n_trials - completed_trials
-        print(
-            f"Resuming study from trial {completed_trials} with {remaining_trials} trials remaining."
-        )
-    else:
-        study = optuna.create_study(
+        study_names = [s.study_name for s in optuna.get_all_study_summaries(storage_name)] # ストレージにある全てのstudyの名前を取得
+        if study_name in study_names:
+            study = optuna.load_study(study_name=study_name, storage=storage_name)
+            # 残りの試行数を計算
+            completed_trials = len(
+                [t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE]
+            )
+            remaining_trials = n_trials - completed_trials
+            print(
+                f"Resuming study from trial {completed_trials} with {remaining_trials} trials remaining."
+            )
+        else:
+            study = optuna.create_study(
             study_name=study_name, storage=storage_name, direction="minimize"
-        )
-        remaining_trials = n_trials  # 初回実行時には全試行を実行
+            )
+            remaining_trials = n_trials
+    else:
+        print("optuna.db does not exist.")
+        sys.exit(1)
 
     def print_progress(study, trial):
         print(f"Trial {trial.number} completed with val_loss: {trial.value}")
@@ -121,7 +145,7 @@ if __name__ == "__main__":
     if remaining_trials > 0:
         study.optimize(objective, n_trials=remaining_trials, callbacks=[print_progress])
 
-    save_params(study, "regressor_params.json")  # 最適なパラメータを保存
+    save_added_params(study, "params.json")  # 最適なパラメータを保存
 
     best_trial = study.best_trial
     print(f"Best trial number: {best_trial.number}")

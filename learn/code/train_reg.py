@@ -37,8 +37,8 @@ def learning(
     train_loss_list = []
     val_loss_list = []
     epoch_list = []
-    early_stopping_counter = 0
-    patience = 20  # 検証損失が改善しないエポック数の上限
+    # early_stopping_counter = 0
+    # patience = 20  # 検証損失が改善しないエポック数の上限
 
     if os.path.exists(checkpoint_path):
         checkpoint = torch.load(checkpoint_path)
@@ -69,7 +69,7 @@ def learning(
         # 更新されたモデルを保存
         if val_loss < min_loss:
             min_loss = val_loss
-            early_stopping_counter = 0
+            # early_stopping_counter = 0
             torch.save(
                 {
                     "epoch": epoch,
@@ -82,11 +82,11 @@ def learning(
                 },
                 checkpoint_path,
             )
-        else:
-            early_stopping_counter += 1
-            if early_stopping_counter >= patience:
-                print("Early stopping")
-                break
+        # else:
+        #     early_stopping_counter += 1
+        #     if early_stopping_counter >= patience:
+        #         print("Early stopping")
+        #         break
 
     return train_loss_list, val_loss_list
 
@@ -112,8 +112,8 @@ def main():
 
     layer_num = int(sys.argv[1])
     tree_name = f"tree_{layer_num}layer"
-    checkpoint_path = f"../pth/reg_{layer_num}layer.pth"
-    loss_fig_path = f"../figures/reg_train_{layer_num}layer.png"
+    checkpoint_path = f"../pth/reg/reg_{layer_num}layer.pth"
+    loss_fig_path = f"../figures/reg_train/reg_train_{layer_num}layer.png"
     input_root_path = "../../geant/data/input_nn.root"
     n_epoch = 100
 
@@ -138,7 +138,7 @@ def main():
     )
 
     # モデルの初期化
-    params = load_params("regressor_params.json")
+    params = load_params("params.json")
     regressor_hidden_sizes = [
         params[f"regressor_hidden_size_{i}"]
         for i in range(params["regressor_hidden_layers"])
@@ -148,7 +148,7 @@ def main():
         input_size=layer_num,
         hidden_sizes=regressor_hidden_sizes
     ).to(device)
-    loss_function = nn.MSELoss()
+    loss_function = nn.L1Loss()
     optimizer = optim.SGD(model.parameters(), lr=0.01)
 
     # GPUの設定

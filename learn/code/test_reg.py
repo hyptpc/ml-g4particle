@@ -14,7 +14,7 @@ def test_reg_model(model_path, test_data_path, fig_path, layer_num, batch_size=2
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     # モデルのロード
-    params = load_params("regressor_params.json")
+    params = load_params("params.json")
     regressor_hidden_sizes = [
         params[f"regressor_hidden_size_{i}"]
         for i in range(params["regressor_hidden_layers"])
@@ -61,8 +61,8 @@ if __name__ == "__main__":
     layer_num = int(sys.argv[1])
     tree_name = f"tree_{layer_num}layer"
     test_data_path = "../../geant/data/input_test.root"
-    model_path = f"../pth/reg_{layer_num}layer.pth"  # 学習済みモデルの保存先
-    fig_path = f"../figures/reg_test_{layer_num}layer.png"  # プロット保存先
+    model_path = f"../pth/reg/reg_{layer_num}layer.pth"  # 学習済みモデルの保存先
+    fig_path = f"../figures/reg_test/reg_test_{layer_num}layer.png"  # プロット保存先
 
     # 評価の実行
     test_reg_model(model_path, test_data_path, fig_path, layer_num)

@@ -17,7 +17,7 @@ import os
 import sys
 from include.dataset import ClassificationDataset
 from include.models import FullModel
-from include.utils import train_model, val_model, plot_figures, load_params
+from include.utils import class_train_model, class_val_model, plot_figures, load_params
 
 
 """ leaning function """
@@ -41,18 +41,30 @@ def learning(
     epoch_list = []
     early_stopping_counter = 0
     patience = 20  # 検証損失が改善しないエポック数の上限
+    
+    if os.path.exists(reg_pth):
+        reg_ckpt = torch.load(reg_pth, map_location=device)
+        model.regressor.load_state_dict(reg_ckpt["model"])
+        print(f"Regressor weights loaded from {reg_pth}")
+    else:
+        print(f"Warning: {reg_pth} not found")
+        sys.exit(1)
+        
+    # Regressorの重みを固定（フリーズ）
+    for param in model.regressor.parameters():
+        param.requires_grad = False
 
     if os.path.exists(class_pth):
-        checkpoint = torch.load(class_pth)
-        model.load_state_dict(checkpoint["model"])
-        optimizer.load_state_dict(checkpoint["optimizer"])
-        start_epoch = checkpoint["epoch"] + 1  # 学習を前回のエポックから再開
-        train_loss_list = checkpoint["train_loss"]
-        val_loss_list = checkpoint["val_loss"]
-        train_accuracy_list = checkpoint["train_accuracy"]
-        val_accuracy_list = checkpoint["val_accuracy"]
-        epoch_list = checkpoint["epoch_list"]
-        min_loss = checkpoint["min_loss"]
+        class_ckpt = torch.load(class_pth)
+        model.load_state_dict(class_ckpt["model"])
+        optimizer.load_state_dict(class_ckpt["optimizer"])
+        start_epoch = class_ckpt["epoch"] + 1  # 学習を前回のエポックから再開
+        train_loss_list = class_ckpt["train_loss"]
+        val_loss_list = class_ckpt["val_loss"]
+        train_accuracy_list = class_ckpt["train_accuracy"]
+        val_accuracy_list = class_ckpt["val_accuracy"]
+        epoch_list = class_ckpt["epoch_list"]
+        min_loss = class_ckpt["min_loss"]
         print(f"Previous checkpoint loaded. Resuming training from epoch {start_epoch}")
     else:
         start_epoch = 1
@@ -60,15 +72,15 @@ def learning(
 
     # epoch loop
     for epoch in range(start_epoch, n_epoch + 1, 1):
-        train_loss, train_accuracy = train_model(
+        train_loss, train_accuracy = class_train_model(
             model, train_loader, loss_function, optimizer, device=device
         )
-        val_loss, val_accuracy = val_model(
+        val_loss, val_accuracy = class_val_model(
             model, val_loader, loss_function, device=device
         )
         print(
             "Epoch [{}/{}] | Train [loss:{:.5f}, acc:{:.5f}] | Val [loss:{:.5f}, acc:{:.5f}]".format(
-                epoch + 1, n_epoch, train_loss, train_accuracy, val_loss, val_accuracy
+                epoch, n_epoch, train_loss, train_accuracy, val_loss, val_accuracy
             )
         )
         train_loss_list.append(train_loss)
@@ -110,11 +122,11 @@ def main():
 
     layer_num = int(sys.argv[1])
     tree_name = f"tree_{layer_num}layer"
-    reg_pth = f"../pth/reg_train_{layer_num}layer.pth"
-    class_pth = f"../pth/class_train_{layer_num}layer.pth"
-    fig_path = f"../figures/class_train_{layer_num}layer.png"
+    reg_pth = f"../pth/reg/reg_{layer_num}layer.pth"
+    class_pth = f"../pth/class/class_{layer_num}layer.pth"
+    fig_path = f"../figures/class_train/class_train_{layer_num}layer.png"
     input_root_path = "../../geant/data/input_nn.root"
-    n_epoch = 150
+    n_epoch = 100
 
     # データセットの作成
     full_dataset = ClassificationDataset(
@@ -137,10 +149,10 @@ def main():
     )
 
     # モデルの初期化
-    params = load_params("tuned_params.json")
-    encoder_hidden_sizes = [
-        params[f"encoder_hidden_size_{i}"]
-        for i in range(params["encoder_hidden_layers"])
+    params = load_params("params.json")
+    regressor_hidden_sizes = [
+        params[f"regressor_hidden_size_{i}"]
+        for i in range(params["regressor_hidden_layers"])
     ]
     classifier_hidden_sizes = [
         params[f"classifier_hidden_size_{i}"]
@@ -149,7 +161,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = FullModel(
         layer_num=layer_num,
-        encoder_hidden_sizes=encoder_hidden_sizes,
+        regressor_hidden_sizes=regressor_hidden_sizes,
         classifier_hidden_sizes=classifier_hidden_sizes,
     ).to(device)
     loss_function = nn.CrossEntropyLoss()
