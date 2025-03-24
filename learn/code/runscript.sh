@@ -83,7 +83,11 @@
 # # ================================
 
 for layer in {10..32}; do
-    bsub -q h python3 test_class.py $layer
+    python3 test_class.py $layer
+    if [ $? -ne 0 ]; then
+        echo "Error occurred during processing of layer $layer. Exiting..."
+        exit 1
+    fi
 done
 
 # bjobs -w | grep -q "PEND\|RUN"
