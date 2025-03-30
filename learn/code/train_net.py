@@ -110,9 +110,9 @@ def main():
     layer_num = int(sys.argv[1])
     tree_name = f"tree_{layer_num}layer"
     checkpoint_path = f"../pth/train_{layer_num}layer.pth"
-    fig_path = f"../figures/train_{layer_num}layer.png"
+    fig_path = f"../fig/train_{layer_num}layer.png"
     input_root_path = "../../geant/rootfiles/input_nn.root"
-    n_epoch = 150
+    n_epoch = 100
 
     # データセットの作成
     full_dataset = CustomRootDataset(
@@ -136,18 +136,16 @@ def main():
 
     # モデルの初期化
     params = load_params("tuned_params.json")
-    encoder_hidden_sizes = [
-        params[f"encoder_hidden_size_{i}"]
-        for i in range(params["encoder_hidden_layers"])
-    ]
+    lstm_hidden_size = params["lstm_hidden_size"]
+    lstm_num_layers = params["lstm_num_layers"]
     classifier_hidden_sizes = [
         params[f"classifier_hidden_size_{i}"]
         for i in range(params["classifier_hidden_layers"])
     ]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = FullModel(
-        layer_num=layer_num,
-        encoder_hidden_sizes=encoder_hidden_sizes,
+        lstm_hidden_size=lstm_hidden_size,
+        lstm_num_layers=lstm_num_layers,
         classifier_hidden_sizes=classifier_hidden_sizes,
     ).to(device)
     loss_function = nn.CrossEntropyLoss()

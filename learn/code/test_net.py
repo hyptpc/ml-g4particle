@@ -136,18 +136,16 @@ def main():
 
     # モデルの初期化
     params = load_params("tuned_params.json")
-    encoder_hidden_sizes = [
-        params[f"encoder_hidden_size_{i}"]
-        for i in range(params["encoder_hidden_layers"])
-    ]
+    lstm_hidden_size = params["encoder_hidden_size"]
+    lstm_num_layers = params["encoder_num_layers"]
     classifier_hidden_sizes = [
         params[f"classifier_hidden_size_{i}"]
         for i in range(params["classifier_hidden_layers"])
     ]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = FullModel(
-        layer_num=layer_num,
-        encoder_hidden_sizes=encoder_hidden_sizes,
+        lstm_hidden_size=lstm_hidden_size,
+        lstm_num_layers=lstm_num_layers,
         classifier_hidden_sizes=classifier_hidden_sizes,
     ).to(device)
     if torch.cuda.is_available() and torch.cuda.device_count() > 1:

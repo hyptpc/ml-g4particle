@@ -38,7 +38,7 @@ def calculate_beta(mom, pid):
 # メイン処理
 def main():
     file1 = "../../geant/rootfiles/output.root" # latent
-    file2 = "/home/had/kohki/work/ML/2024/geant/rootfiles/input_test.root" # mean
+    file2 = "../../geant/rootfiles/input_test.root" # mean
     tree_name = "tree_32layer"
     
     # データの読み込み
@@ -75,7 +75,7 @@ def main():
     plt.xlabel("initial Beta", fontsize=14)
     plt.grid(True)
     plt.legend(loc="lower right", fontsize=14)
-    plt.savefig("../figures/latent.png")
+    plt.savefig("../fig/latent.png")
     
     
     proton_betas = [beta for beta, pid in zip(betas1, pid1) if pid == 0]  # proton
@@ -90,7 +90,7 @@ def main():
     plt.ylabel("Count", fontsize=14)
     plt.legend(loc="upper left", fontsize=12)
     plt.grid(True)
-    plt.savefig("../figures/beta.png")
+    plt.savefig("../fig/beta.png")
 
 
 if __name__ == "__main__":

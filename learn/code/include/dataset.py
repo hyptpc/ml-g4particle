@@ -50,7 +50,7 @@ class CustomRootDataset(Dataset):
         inputs = {
             "mom": self.mom[idx],
             "tof": self.tof[idx],
-            "energy_layers": self.energy_layers[idx],
+            "energy_layers": self.energy_layers[idx].unsqueeze(-1),  # LSTMモデルへの受け渡し用に(batch, 32) → (batch, 32, 1)に変換
         }
         target = self.particles[idx]
         return {"input": inputs, "target": target}

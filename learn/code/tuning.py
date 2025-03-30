@@ -41,13 +41,9 @@ sampled_dt = CustomRootDataset(
 
 def objective(trial):
     # EncoderとClassifierの隠れ層数とサイズを探索
-    encoder_hidden_layers = trial.suggest_int("encoder_hidden_layers", 2, 6)
+    lstm_hidden_size = trial.suggest_categorical("lstm_hidden_size", [32, 64, 128, 256])
+    lstm_num_layers = trial.suggest_int("lstm_num_layers", 1, 3)
     classifier_hidden_layers = trial.suggest_int("classifier_hidden_layers", 2, 6)
-
-    encoder_hidden_sizes = [
-        trial.suggest_categorical(f"encoder_hidden_size_{i}", [128, 256, 512, 1024])
-        for i in range(encoder_hidden_layers)
-    ]
     classifier_hidden_sizes = [
         trial.suggest_categorical(f"classifier_hidden_size_{i}", [128, 256, 512, 1024])
         for i in range(classifier_hidden_layers)
@@ -68,8 +64,8 @@ def objective(trial):
     # モデルの初期化
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = FullModel(
-        layer_num=layer_num,
-        encoder_hidden_sizes=encoder_hidden_sizes,
+        lstm_hidden_size=lstm_hidden_size,
+        lstm_num_layers=lstm_num_layers,
         classifier_hidden_sizes=classifier_hidden_sizes,
     ).to(device)
     loss_function = nn.CrossEntropyLoss()

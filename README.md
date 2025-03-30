@@ -7,12 +7,10 @@ Using machine learning, identify p, pi, k from momentum, energyloss, tof based o
 
 ## <dt>Environments</dt>
 
-- run the following commands to set up python environments.
+- You can set up python environments using anaconda.
 
 ```.sh
-$ python3 -m venv .venv
-$ source .venv/bin/activate
-(.venv) $ pip install -r requirements.txt
+$ conda env create -f environment.yml
 ```
 
 ## <dt>How To Start</dt>
@@ -25,7 +23,7 @@ $ source .venv/bin/activate
 $ cd geant
 $ ./bin/Linux-g++/RCSim
 $ /control/execute/vis.mac
-$ /run/beamOn 350000
+$ /run/beamOn 1000000
 ```
 
 - Make sure to change the beam profile and the rootfile-name. You can change the beam particle in **src/PrimaryGeneratorAction.cc**, and the name of the rootfile can be changed in **src/RunAction.cc**.
@@ -39,8 +37,11 @@ $ /run/beamOn 350000
 
 ### <dd>Step2: Training
 
-- To start the training process, move to **learn/code** and run **train.sh**. **train_net.py** will run in bsub for each nunmber of layers.
-- After training, run **test.sh** to evluate the traning model. The prediction-id and true-id will be filled to **output_xxlayer.root**, and the accuracy woill be calculated.
+- Before training, You should tune the hyper-parameters. So, run **tuning.py**. after the tuning is completed, the parameters will be recorded to json file.
+
+- After that you can start the training process, move to **learn/code** and run **train.sh**. **train_net.py** will run in bsub for each nunmber of layers.
+- This process requires ~6 hours on KEKCC enviornment, using CPU.
+- After training, run **test.sh** to evaluate the traning model. The prediction-id and true-id will be filled to **output_xxlayer.root**, and the accuracy will be calculated.
 
 </dd>
 
