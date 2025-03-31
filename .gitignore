@@ -4,6 +4,7 @@
 *.db
 *.csv
 *.json
+*.log
 .vscode/
 __pycache__
 sou*~

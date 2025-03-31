@@ -1,5 +1,3 @@
-# test_net.py
-# created by K.Amemiya (2024/11/15)
 
 import torch.multiprocessing
 
@@ -51,17 +49,17 @@ def save_to_files(
             particle_ = labels.cpu().numpy()
             # outputs = model(mom, tof, energy_layers)
             latent, outputs = model.forward_with_latent(mom, tof, energy_layers)
-            latent = latent.cpu().numpy()
+            latent = latent.squeeze(-1)  # (batch, 1) → (batch,)
             particle_ML = torch.argmax(outputs, dim=1).cpu().numpy()
             correct_predictions += np.sum(particle_ == particle_ML)
 
             for j in range(len(labels)):
-                write_mom.append(mom[j].cpu().numpy())
-                write_tof.append(tof[j].cpu().numpy())
+                write_mom.append(mom[j].cpu().item())
+                write_tof.append(tof[j].cpu().item())
                 for layer in range(layer_num):
-                    ene = energy_layers[j, layer]
-                    write_ene[layer].append(ene.cpu().numpy())
-                write_latent.append(latent[j])  # Save latent representation
+                    ene = energy_layers[j, layer].item()
+                    write_ene[layer].append(ene)
+                write_latent.append(latent[j].item())
                 particle = particle_[j]
                 write_particle.append(particle)
                 write_particle_ML.append(particle_ML[j])
@@ -110,7 +108,7 @@ def save_to_files(
         "pid_ML": write_particle_ML,
         "tof": write_tof,
         "mom": write_mom,
-        "latent": write_latent,  # Save latent data
+        "latent": write_latent,
     }
     for layer in range(layer_num):
         extend_data[f"ene_layer{layer}"] = write_ene[layer]
@@ -119,14 +117,13 @@ def save_to_files(
 
 
 def main():
-
     layer_num = int(sys.argv[1])
     tree_name = f"tree_{layer_num}layer"
     test_root_path = "../../geant/rootfiles/input_test.root"
     output_root_path = f"../../geant/rootfiles/output_{layer_num}layer.root"
     checkpoint_path = f"../pth/train_{layer_num}layer.pth"
     csv_path = "../../likelihood/csv/accuracy.csv"
-    sample_fraction = 1  # Use all data
+    sample_fraction = 1
 
     print("Loading data ...")
     test_dataset = CustomRootDataset(
@@ -136,8 +133,8 @@ def main():
 
     # モデルの初期化
     params = load_params("tuned_params.json")
-    lstm_hidden_size = params["encoder_hidden_size"]
-    lstm_num_layers = params["encoder_num_layers"]
+    lstm_hidden_size = params["lstm_hidden_size"]
+    # lstm_num_layers = params["lstm_num_layers"]
     classifier_hidden_sizes = [
         params[f"classifier_hidden_size_{i}"]
         for i in range(params["classifier_hidden_layers"])
@@ -145,7 +142,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = FullModel(
         lstm_hidden_size=lstm_hidden_size,
-        lstm_num_layers=lstm_num_layers,
+        # lstm_num_layers=lstm_num_layers,
         classifier_hidden_sizes=classifier_hidden_sizes,
     ).to(device)
     if torch.cuda.is_available() and torch.cuda.device_count() > 1:

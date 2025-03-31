@@ -54,10 +54,10 @@ class FullModel(nn.Module):
     - lstm_num_layers: 最適化されたLSTMの層の数
     - classifier_hidden_sizes: 最適化されたClassifierの隠れ層のサイズのリスト
     """
-    def __init__(self, lstm_hidden_size, lstm_num_layers, classifier_hidden_sizes):
+    def __init__(self, lstm_hidden_size, classifier_hidden_sizes):
         super().__init__()
         self.encoder = LSTMencoder(
-            input_size=1, hidden_size=lstm_hidden_size, num_layers=lstm_num_layers, output_size=1
+            input_size=1, hidden_size=lstm_hidden_size, output_size=1
         )
         self.classifier = Classifier(
             input_size=3, hidden_sizes=classifier_hidden_sizes, output_size=3
@@ -65,9 +65,7 @@ class FullModel(nn.Module):
 
     def forward(self, mom, tof, energy_layers):
         latent = self.encoder(energy_layers)  # 多chのde/dxを1次元の情報に変換
-        x = torch.cat(
-            (mom.unsqueeze(1), tof.unsqueeze(1), latent), dim=1
-        )  # mom, tof, latentを結合
+        x = torch.cat((mom.unsqueeze(1), tof.unsqueeze(1), latent), dim=1)  # mom, tof, latentを結合
         return self.classifier(x)
 
     def forward_with_latent(self, mom, tof, energy_layers):

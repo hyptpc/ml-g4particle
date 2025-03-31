@@ -137,7 +137,7 @@ def main():
     # モデルの初期化
     params = load_params("tuned_params.json")
     lstm_hidden_size = params["lstm_hidden_size"]
-    lstm_num_layers = params["lstm_num_layers"]
+    # lstm_num_layers = params["lstm_num_layers"]
     classifier_hidden_sizes = [
         params[f"classifier_hidden_size_{i}"]
         for i in range(params["classifier_hidden_layers"])
@@ -145,7 +145,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = FullModel(
         lstm_hidden_size=lstm_hidden_size,
-        lstm_num_layers=lstm_num_layers,
+        # lstm_num_layers=lstm_num_layers,
         classifier_hidden_sizes=classifier_hidden_sizes,
     ).to(device)
     loss_function = nn.CrossEntropyLoss()
