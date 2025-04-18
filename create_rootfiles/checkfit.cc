@@ -71,7 +71,7 @@ std::pair<double, double> fit_gaussian(int id, TH1D *h, TF1 *f, const std::vecto
 
 void checkfit()
 {
-    TFile *infile = TFile::Open("/home/had/kohki/work/ML/2024/geant/rootfiles/input.root", "READ");
+    TFile *infile = TFile::Open("../geant/rootfiles/input.root", "READ");
     TTree *tree = (TTree *)infile->Get("tree_32layer");
     int particle;
     double mom, ene, tof;

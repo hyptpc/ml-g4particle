@@ -9,9 +9,8 @@
 void likelihood(int layer)
 {
   gROOT->SetStyle("ATLAS");
-
-  TFile *fin1 = new TFile(Form("/home/had/kohki/work/ML/2024/geant/rootfiles/hpdf_%dlayer.root", layer));
-  TFile *fin2 = new TFile("/home/had/kohki/work/ML/2024/geant/rootfiles/input.root");
+  TFile *fin1 = new TFile(Form("../../geant/rootfiles/hpdf_%dlayer.root", layer));
+  TFile *fin2 = new TFile("../../geant/rootfiles/input.root");
   TTree *tree = (TTree *)fin2->Get(Form("tree_%dlayer", layer));
 
   TH2D *hpdf[3][500]; //[3]:particle, [500]:mom
@@ -197,5 +196,5 @@ void likelihood(int layer)
     gEff_SB[ip]->GetYaxis()->SetRangeUser(0.7, 1.01);
     gEff_SB[ip]->Draw("AP");
   }
-  c1->SaveAs(Form("/home/had/kohki/work/ML/2024/likelihood/fig/likelihood_%dlayer.png", layer));
+  c1->SaveAs(Form("../fig/likelihood_%dlayer.png", layer));
 }

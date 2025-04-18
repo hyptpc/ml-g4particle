@@ -1,4 +1,6 @@
-// note that pdf is scaled in ×1000 order !!
+// +++
+// Note that pdf is scaled in ×1000 order !!
+//                                     ++++
 
 #include <TStyle.h>
 #include <TFile.h>
@@ -13,10 +15,10 @@ void draw_pdf() // GeV/c
   gStyle->SetOptStat(0); // Disable statistics box
 
   int layers = 32;
-  double true_mom = 0.310;
+  double true_mom = 0.500;
   int fixed_mom = (int)((true_mom - 0.3) * 1000.);
 
-  TFile *file = new TFile(Form("/home/had/kohki/work/ML/2024/geant/rootfiles/hpdf_%dlayer.root", layers));
+  TFile *file = new TFile(Form("../../geant/rootfiles/hpdf_%dlayer.root", layers));
   if (!file || file->IsZombie())
   {
     std::cerr << "Error opening file!" << std::endl;
@@ -62,5 +64,5 @@ void draw_pdf() // GeV/c
   }
   // Close the file
   // file->Close();
-  canvas->SaveAs(Form("/home/had/kohki/work/ML/2024/likelihood/fig/pdf_%3f_%d.png", true_mom, layers));
+  canvas->SaveAs(Form("../fig/pdf_%3f_%d.png", true_mom, layers));
 }

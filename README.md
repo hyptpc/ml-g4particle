@@ -1,6 +1,12 @@
 # PID analysis for HypTPC using PyTorch
 
-Using machine learning, identify p, pi, k from momentum, energyloss, tof based on Geant4 simulation data.
+Classify proton, pion, kaon using the basic MLP model, and compare with the conventional method.<br>
+
+![](basic-model.png)
+
+Input: tof, momentum, energyloss (truncated mean)<br>
+Output: proton, pion, kaon<br>
+Training data: original Geant4 simulation.
 <br><br>
 
 <dl>
@@ -25,7 +31,7 @@ $ source .venv/bin/activate
 $ cd geant
 $ ./bin/Linux-g++/RCSim
 $ /control/execute/vis.mac
-$ /run/beamOn 350000
+$ /run/beamOn 1000000
 ```
 
 - Make sure to change the beam profile and the rootfile-name. You can change the beam particle in **src/PrimaryGeneratorAction.cc**, and the name of the rootfile can be changed in **src/RunAction.cc**.
@@ -50,13 +56,10 @@ $ /run/beamOn 350000
 
 </dd>
 
-## <dt>Model</dt>
-
-For details, check the attached pdf file.
-<br><br>
 
 ## <dt>Results</dt>
 
-For details, check the attached pdf file.
+For details, check the paper below.<br>
+https://lambda.phys.tohoku.ac.jp/~amemiya/jparc2024_proceedings.pdf
 
 </dl>

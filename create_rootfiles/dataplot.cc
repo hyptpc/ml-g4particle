@@ -13,7 +13,7 @@
 void dataplot()
 {
     // Open the ROOT file containing the generated data
-    TFile *file = new TFile("/home/had/kohki/work/ML/2024/geant/rootfiles/input.root", "READ");
+    TFile *file = new TFile("../geant/rootfiles/input.root", "READ");
     TTree *tree = (TTree *)file->Get("tree_32layer"); // data of all-layer-hit
 
     // Declare variables to store data

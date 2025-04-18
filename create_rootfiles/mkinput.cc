@@ -135,14 +135,14 @@ void mkinput(int layer)
 
     // List of ROOT files to process
     std::vector<std::string> filenames = {
-        "/home/had/kohki/work/ML/2024/geant/rootfiles/proton_raw.root",
-        "/home/had/kohki/work/ML/2024/geant/rootfiles/pion_raw.root",
-        "/home/had/kohki/work/ML/2024/geant/rootfiles/kaon_raw.root"};
+        "../geant/rootfiles/proton_raw.root",
+        "../geant/rootfiles/pion_raw.root",
+        "../geant/rootfiles/kaon_raw.root"};
 
     std::vector<int> particle_ids = {0, 1, 2};
 
     // Create a new ROOT file to save the output
-    TFile *outfile = new TFile(Form("/home/had/kohki/work/ML/2024/geant/rootfiles/input%dlayer.root", layer), "RECREATE");
+    TFile *outfile = new TFile(Form("../geant/rootfiles/input%dlayer.root", layer), "RECREATE");
 
     int particle_id;
     double tof;

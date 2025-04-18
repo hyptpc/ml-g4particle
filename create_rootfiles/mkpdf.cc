@@ -158,8 +158,8 @@ void generate_data(const char *input_file, const char *output_hpdf_file, int lay
 int mkpdf(int layer)
 {
     gROOT->SetBatch(kTRUE);
-    const char *input_file = "/home/had/kohki/work/ML/2024/geant/rootfiles/input.root";
-    const char *output_hpdf_file = Form("/home/had/kohki/work/ML/2024/geant/rootfiles/hpdf_%dlayer.root", layer);
+    const char *input_file = "../geant/rootfiles/input.root";
+    const char *output_hpdf_file = Form("../geant/rootfiles/hpdf_%dlayer.root", layer);
     int n_generated = 1000000000;
     generate_data(input_file, output_hpdf_file, layer, n_generated);
     return 0;
