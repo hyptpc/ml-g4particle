@@ -1,5 +1,6 @@
 *.pth
 *.png
+!basic-model.png
 *.csv
 *.root
 *.db
