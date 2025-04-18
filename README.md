@@ -4,8 +4,8 @@ Classify proton, pion, kaon using the LSTM encoder model, and compare with the c
 
 ![](lstm-encoder-model.png)
 
-Input: tof, momentum, energyloss (individual)
-Output: proton, pion, kaon
+Input: tof, momentum, energyloss (individual)<br>
+Output: proton, pion, kaon<br>
 Training data: original Geant4 simulation.
 
 <br><br>
