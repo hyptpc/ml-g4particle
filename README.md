@@ -1,6 +1,13 @@
 # PID analysis for HypTPC using PyTorch
 
-Using machine learning, identify p, pi, k from momentum, energyloss, tof based on Geant4 simulation data.
+Classify proton, pion, kaon using the LSTM encoder model, and compare with the conventional method.
+
+![](lstm-encoder-model.png)
+
+Input: tof, momentum, energyloss (individual)
+Output: proton, pion, kaon
+Training data: original Geant4 simulation.
+
 <br><br>
 
 <dl>
@@ -18,6 +25,8 @@ $ conda env create -f environment.yml
 ### <dd>Step1: Creating train/test Data
 
 - Move to **geant** directory and create data for each particles (Proton, Kaon, Pion)
+
+![](g4-setup.png)
 
 ```sh
 $ cd geant
@@ -51,13 +60,9 @@ $ /run/beamOn 1000000
 
 </dd>
 
-## <dt>Model</dt>
-
-For details, check the attached pdf file.
-<br><br>
-
 ## <dt>Results</dt>
 
-For details, check the attached pdf file.
+For details, check the paper below.<br>
+https://lambda.phys.tohoku.ac.jp/~amemiya/jparc2024_proceedings.pdf
 
 </dl>

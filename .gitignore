@@ -1,5 +1,7 @@
 *.pth
 *.png
+!g4-setup.png
+!lstm-encoder-model.png
 *.root
 *.db
 *.csv
