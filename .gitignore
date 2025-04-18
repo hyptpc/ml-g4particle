@@ -1,6 +1,7 @@
 *.pth
 *.png
 !basic-model.png
+!g4-setup.png
 *.csv
 *.root
 *.db

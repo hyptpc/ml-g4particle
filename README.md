@@ -27,6 +27,8 @@ $ source .venv/bin/activate
 
 - Move to **geant** directory and create data for each particles (Proton, Kaon, Pion)
 
+![](g4-setup.png)
+
 ```sh
 $ cd geant
 $ ./bin/Linux-g++/RCSim
@@ -55,7 +57,6 @@ $ /run/beamOn 1000000
 - To Compare ML accuracy with the conventional method, move to **likelihood/ana** and run **accuracy.sh**. The accuracy result will be saved in csv format.
 
 </dd>
-
 
 ## <dt>Results</dt>
 
