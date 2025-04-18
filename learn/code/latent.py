@@ -74,7 +74,7 @@ def main():
     plt.scatter(betas2, means, marker=".", alpha=0.6, c= "red", label="Mean output")
     plt.xlabel("initial Beta", fontsize=14)
     plt.grid(True)
-    plt.legend(loc="lower right", fontsize=14)
+    # plt.legend(loc="upper right", fontsize=14)
     plt.savefig("../fig/latent.png")
     
     
