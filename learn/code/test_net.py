@@ -79,9 +79,9 @@ def main():
         sys.exit(1)
     layer_num = int(sys.argv[1])
     tree_name = f"tree_{layer_num}layer"
-    test_root_path = "/home/had/kohki/work/ML/2024/geant/rootfiles/input_test.root"
-    output_root_path = f"/home/had/kohki/work/ML/2024/geant/rootfiles/output_{layer_num}layer.root"
-    checkpoint_path = f"/home/had/kohki/work/ML/2024/learn/pth/train_{layer_num}layer.pth"
+    test_root_path = "../../geant/rootfiles/input_test.root"
+    output_root_path = f"../../geant/rootfiles/output_{layer_num}layer.root"
+    checkpoint_path = f"../pth/train_{layer_num}layer.pth"
     sample_fraction = 1  # Use all data
 
     # Load the data

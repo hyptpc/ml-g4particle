@@ -21,7 +21,7 @@ if len(sys.argv) < 2:
 num_layer = int(sys.argv[1])
 
 # ROOTファイルからデータを読み込む
-file = uproot3.open(f"/home/had/kohki/work/ML/2024/geant/rootfiles/output.root")
+file = uproot3.open(f"../../geant/rootfiles/output.root")
 tree = file[f"tree_{num_layer}layer"]
 # ブランチからデータを取得
 particle_data = tree.array("pid")
@@ -62,4 +62,4 @@ for i, accuracy in enumerate(class_accuracies):
 # 正答率を計算
 accuracy = accuracy_score(particle_data, particle_ml_data)
 print(f"Accuracy: {accuracy:.4f}")
-plt.savefig(f"../figures/conf_matrix_{num_layer}.png")
+plt.savefig(f"../fig/conf_matrix_{num_layer}.png")

@@ -44,7 +44,7 @@ plt.legend(loc='lower right', fontsize=14)
 plt.grid(True)
 
 # グラフを保存する
-plt.savefig('../figures/comp_acc.png', bbox_inches="tight", pad_inches=0.05)
+plt.savefig('../fig/comp_acc.png', bbox_inches="tight", pad_inches=0.05)
 
 # # グラフを表示する
 # plt.show()

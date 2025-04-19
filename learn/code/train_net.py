@@ -257,9 +257,9 @@ def main():
         sys.exit(1)
     layer_num = int(sys.argv[1])
     tree_name = f"tree_{layer_num}layer"
-    checkpoint_path = f"/home/had/kohki/work/ML/2024/learn/pth/train_{layer_num}layer.pth"
-    fig_path = f"/home/had/kohki/work/ML/2024/learn/figures/train_{layer_num}layer.png"
-    input_root_path = "/home/had/kohki/work/ML/2024/geant/rootfiles/input_nn.root"
+    checkpoint_path = f"../pth/train_{layer_num}layer.pth"
+    fig_path = f"../fig/train_{layer_num}layer.png"
+    input_root_path = "../../geant/rootfiles/input_nn.root"
     sample_fraction = 1 # データのサンプリング割合
     
     start_time = time.time()  # 計算時間計測開始

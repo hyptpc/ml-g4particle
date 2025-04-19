@@ -9,5 +9,5 @@
 #!/bin/bash
 
 for layer in {10..32}; do
-    bsub -q hx python3 train_net.py $layer
+    bsub -q h python3 train_net.py $layer
 done

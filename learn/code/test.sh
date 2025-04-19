@@ -9,7 +9,7 @@
 #!/bin/bash
 
 for layer in {10..32}; do
-    bsub -q hx python3 test_net.py $layer
+    bsub -q h python3 test_net.py $layer
 done
 
 bjobs -w | grep -q "PEND\|RUN"
@@ -21,7 +21,7 @@ do
 done
 
 # integrate all output rootfiles
-cd /home/had/kohki/work/ML/2024/geant/rootfiles
+cd ../../geant/rootfiles
 hadd output.root output_*layer.root
 
 # wait until merging is finished, and delete tmp rootfiles
