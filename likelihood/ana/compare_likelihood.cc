@@ -1,7 +1,7 @@
 // *************** INFO *************************
 // Run as root 'compare_likelihood(<layer>)'
 // layer : 10 ~ 32
-// Compare Efficiency / FoM value between likelihood and ML
+// Compare FoM value between likelihood and ML
 //
 // K. Amemiya 2024/07/23
 // **********************************************
@@ -19,9 +19,9 @@
 void compare_likelihood(int layer)
 {
   gStyle->SetOptStat(0);
-  TFile *fin1 = new TFile(Form("/home/had/kohki/work/ML/2024/geant/rootfiles/hpdf_%dlayer.root", layer));
-  TFile *fin2 = new TFile("/home/had/kohki/work/ML/2024/geant/rootfiles/input.root");
-  TFile *fin3 = new TFile("/home/had/kohki/work/ML/2024/geant/rootfiles/output.root");
+  TFile *fin1 = new TFile(Form("../../geant/rootfiles/hpdf_%dlayer.root", layer));
+  TFile *fin2 = new TFile("../../geant/rootfiles/input.root");
+  TFile *fin3 = new TFile("../../geant/rootfiles/output.root");
 
   TTree *t2 = (TTree *)fin2->Get(Form("tree_%dlayer", layer));
   TTree *t3 = (TTree *)fin3->Get(Form("tree_%dlayer", layer));
@@ -76,7 +76,7 @@ void compare_likelihood(int layer)
   int N_particleL_S[3][numLcut] = {0}; // true identification
   int N_particleL[3][numLcut] = {0};
 
-  double FoM[3][numLcut]; // Figure of Merit (S/S+BG)
+  double Pur[3][numLcut]; // Figure of Merit (S/S+BG)
   double Eff[3][numLcut];
 
   for (int k = 0; k < num_event; k++)
@@ -126,12 +126,12 @@ void compare_likelihood(int layer)
     for (int icut = 0; icut < numLcut; ++icut)
     {
       Eff[ip][icut] = (double)N_particleL_S[ip][icut] / (double)N_particle_input[ip][icut];
-      FoM[ip][icut] = (double)N_particleL_S[ip][icut] / (double)N_particleL[ip][icut];
+      Pur[ip][icut] = (double)N_particleL_S[ip][icut] / (double)N_particleL[ip][icut];
     }
   }
 
   double EffML[3];
-  double FoMML[3];
+  double PurML[3];
   t3->SetBranchAddress("pid", &pidML_in);
   t3->SetBranchAddress("pid_ML", &pidML_out);
   for (int ip = 0; ip < 3; ++ip)
@@ -157,7 +157,7 @@ void compare_likelihood(int layer)
     }
 
     EffML[ip] = (double)count_match / (double)count_particle;
-    FoMML[ip] = (double)count_match / (double)count_particle_ML;
+    PurML[ip] = (double)count_match / (double)count_particle_ML;
     // std::cout << "count_particle : " << count_particle << " count_particle_ML : " << count_particle_ML << std::endl;
   }
 
@@ -167,13 +167,13 @@ void compare_likelihood(int layer)
   c->Divide(3, 1);
   TGraph *gEff_SB[3];
 
-  std::ofstream output_file(Form("/home/had/kohki/work/ML/2024/likelihood/ana/Lcut_%dlayer.csv", layer));
-  output_file << "Particle,Best_Eff,Best_FoM,L_cut\n"; // CSV header
+  std::ofstream output_file(Form("Lcut_%dlayer.csv", layer));
+  output_file << "Particle,Best_Eff,Best_Pur,L_cut\n"; // CSV header
 
   for (int ip = 0; ip < 3; ++ip)
   {
     c->cd(ip + 1);
-    gEff_SB[ip] = new TGraph(numLcut, Eff[ip], FoM[ip]);
+    gEff_SB[ip] = new TGraph(numLcut, Eff[ip], Pur[ip]);
     if (ip == 0)
       gEff_SB[ip]->SetTitle("ROC comparison on p");
     else if (ip == 1)
@@ -195,40 +195,47 @@ void compare_likelihood(int layer)
     gEff_SB[ip]->GetYaxis()->SetRangeUser(0.7, 1.01); // change here
     gEff_SB[ip]->Draw("AP");
     TGraph *point = new TGraph(1);
-    point->SetPoint(0, EffML[ip], FoMML[ip]);
+    point->SetPoint(0, EffML[ip], PurML[ip]);
     point->SetMarkerStyle(20);
     point->SetMarkerColor(kRed);
     point->Draw("P");
 
     // Find the best efficiency for the likelihood method
-    double max_product = 0;
+    double max_FoM = 0;
     double best_Eff = 0;
-    double best_FoM = 0;
+    double best_Pur = 0;
     double best_Lcut = 0;
 
     for (int i = 0; i < numLcut; ++i)
     {
-      double product = Eff[ip][i] * FoM[ip][i];
-      if (product > max_product)
+      double FoM = Eff[ip][i] * Pur[ip][i];
+      if (FoM > max_FoM)
       {
-        max_product = product;
+        max_FoM = FoM;
         best_Eff = Eff[ip][i];
-        best_FoM = FoM[ip][i];
+        best_Pur = Pur[ip][i];
         best_Lcut = L_cut[i];
       }
     }
 
-    output_file << ip << "," << best_Eff << "," << best_FoM << "," << best_Lcut << "\n"; // Write the best efficiency to the CSV file
+    TGraph *point_likeli = new TGraph(1);
+    point_likeli->SetPoint(0, best_Eff, best_Pur);
+    point_likeli->SetMarkerStyle(20);
+    point_likeli->SetMarkerColor(kBlue);
+    point_likeli->Draw("P");
 
-    TLatex *tex_ml = new TLatex(0.25, 0.45, Form("Eff: %.3f, FoM: %.3f", EffML[ip], FoMML[ip]));
+    output_file << ip << "," << best_Eff << "," << best_Pur << "," << best_Lcut << "\n"; // Write the best efficiency to the CSV file
+
+    TLatex *tex_ml = new TLatex(0.25, 0.45, Form("FoM: %.3f", EffML[ip] * PurML[ip]));
     tex_ml->SetTextColor(2);
     tex_ml->SetNDC();
     tex_ml->Draw();
-    TLatex *tex_likeli = new TLatex(0.25, 0.5, Form("Eff: %.3f, FoM: %.3f", best_Eff, best_FoM)); // Display the best efficiency
+    TLatex *tex_likeli = new TLatex(0.25, 0.5, Form("FoM: %.3f", max_FoM)); // Display the best efficiency
+    tex_likeli->SetTextColor(kBlue);
     tex_likeli->SetNDC();
     tex_likeli->Draw();
-    std::cout << "Eff : " << best_Eff << " FoM : " << best_FoM << std::endl;
-    std::cout << "Eff_ML : " << EffML[ip] << " FoM_ML : " << FoMML[ip] << std::endl;
+    std::cout << "Eff : " << best_Eff << " Pur : " << best_Pur << std::endl;
+    std::cout << "Eff_ML : " << EffML[ip] << " Pur_ML : " << PurML[ip] << std::endl;
   }
-  c->SaveAs(Form("/home/had/kohki/work/ML/2024/likelihood/fig/comparison_%dlayer.png", layer));
+  c->SaveAs(Form("../fig/comparison_%dlayer.png", layer));
 }

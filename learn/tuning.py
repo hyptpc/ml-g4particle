@@ -224,7 +224,7 @@ def load_trial_history(input_path):
 
 if __name__ == "__main__":
     n_epoch = 50
-    input_root_path = "/home/had/kohki/work/ML/2024/geant/rootfiles/input_test.root"
+    input_root_path = "../geant/rootfiles/input_test.root"
     tree_name = "tree_32layer"
 
     # Check if a previous study exists
@@ -241,7 +241,7 @@ if __name__ == "__main__":
 
     # トライアル履歴を保存
     save_trial_history(
-        study, "/home/had/kohki/work/ML/2024/learn/csv/trial_history.csv"
+        study, "trial_history.csv"
     )
     
     # 最良の結果を表示

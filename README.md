@@ -38,9 +38,9 @@ $ /run/beamOn 1000000
 
 - Make sure to change the beam profile and the rootfile-name. You can change the beam particle in **src/PrimaryGeneratorAction.cc**, and the name of the rootfile can be changed in **src/RunAction.cc**.
 - These simulation data will be saved as **rootfiles/(particle)\_raw.root**
-- After creating data for all 3 particles, move to **create_rootfiles** and run **mktest.cc/mktrain.sh** to create test/train data for ML input.
+- After creating data for all 3 particles, move to **create_rootfiles** and run **mkdata.sh** to create test/train data for ML input.
 - In these macro, truncated mean of the energyloss will be calculated and saved in rootfile format.
-- Inside **test.root/train.root**, data for each number of layers will be saved in individual trees (e.g. tree_xxlayer -> data for xx layer)
+- Inside **input_nn.root/input_test.root**, data for each number of layers will be saved in individual trees (e.g. tree_xxlayer -> data for xx layer)
   <br><br>
 
 </dd>
