@@ -224,11 +224,11 @@ def load_trial_history(input_path):
 
 if __name__ == "__main__":
     n_epoch = 50
-    input_root_path = "../geant/rootfiles/input_test.root"
+    input_root_path = "../../geant/rootfiles/input_test.root"
     tree_name = "tree_32layer"
 
     # Check if a previous study exists
-    study_name = "hidden_study"
+    study_name = "basic_hidden_layers"
     storage_name = "sqlite:///optuna.db"
     if os.path.exists("optuna.db"):
         study = optuna.load_study(study_name=study_name, storage=storage_name)
@@ -241,7 +241,7 @@ if __name__ == "__main__":
 
     # トライアル履歴を保存
     save_trial_history(
-        study, "trial_history.csv"
+        study, "../csv/basic_trial_history.csv"
     )
     
     # 最良の結果を表示
