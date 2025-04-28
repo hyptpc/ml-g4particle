@@ -194,11 +194,6 @@ void compare_likelihood(int layer)
     gEff_SB[ip]->GetXaxis()->SetRangeUser(0.7, 1.01); // change here
     gEff_SB[ip]->GetYaxis()->SetRangeUser(0.7, 1.01); // change here
     gEff_SB[ip]->Draw("AP");
-    TGraph *point = new TGraph(1);
-    point->SetPoint(0, EffML[ip], PurML[ip]);
-    point->SetMarkerStyle(20);
-    point->SetMarkerColor(kRed);
-    point->Draw("P");
 
     // Find the best efficiency for the likelihood method
     double max_FoM = 0;
@@ -220,9 +215,15 @@ void compare_likelihood(int layer)
 
     TGraph *point_likeli = new TGraph(1);
     point_likeli->SetPoint(0, best_Eff, best_Pur);
-    point_likeli->SetMarkerStyle(20);
+    point_likeli->SetMarkerStyle(21);
     point_likeli->SetMarkerColor(kBlue);
     point_likeli->Draw("P");
+
+    TGraph *point = new TGraph(1);
+    point->SetPoint(0, EffML[ip], PurML[ip]);
+    point->SetMarkerStyle(20);
+    point->SetMarkerColor(kRed);
+    point->Draw("P");
 
     output_file << ip << "," << best_Eff << "," << best_Pur << "," << best_Lcut << "\n"; // Write the best efficiency to the CSV file
 
