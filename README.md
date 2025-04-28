@@ -54,12 +54,6 @@ $ /run/beamOn 1000000
 
 </dd>
 
-### <dd>Step3: Comparision with conventional method
-
-- To Compare ML accuracy with the conventional method, move to **likelihood/ana** and run **accuracy.sh**. The accuracy result will be saved in csv format.
-
-</dd>
-
 ## <dt>Results</dt>
 
 For details, check the paper below.<br>
