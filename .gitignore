@@ -2,6 +2,7 @@
 *.png
 !regressor-model.png
 !g4-setup.png
+!regressor-results.png
 *.root
 *.db
 *.csv
